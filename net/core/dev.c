@@ -4073,11 +4073,16 @@ static void qdisc_pkt_len_init(struct sk_buff *skb)
 
 static int dev_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *q,
 			     struct sk_buff **to_free,
-			     struct netdev_queue *txq)
+			     struct netdev_queue *txq,
+			     bool try_no_consume)
 {
 	int rc;
 
-	rc = q->enqueue(skb, q, to_free) & NET_XMIT_MASK;
+	if (try_no_consume && q->try_enqueue)
+		rc = q->try_enqueue(skb, q, to_free) & NET_XMIT_MASK;
+	else
+		rc = q->enqueue(skb, q, to_free) & NET_XMIT_MASK;
+
 	if (rc == NET_XMIT_SUCCESS)
 		trace_qdisc_enqueue(q, txq, skb);
 	return rc;
@@ -4085,7 +4090,8 @@ static int dev_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *q,
 
 static inline int __dev_xmit_skb(struct sk_buff *skb, struct Qdisc *q,
 				 struct net_device *dev,
-				 struct netdev_queue *txq)
+				 struct netdev_queue *txq,
+				 bool try_no_consume)
 {
 	spinlock_t *root_lock = qdisc_lock(q);
 	struct sk_buff *to_free = NULL;
@@ -4103,7 +4109,7 @@ static inline int __dev_xmit_skb(struct sk_buff *skb, struct Qdisc *q,
 			 * of q->seqlock to protect from racing with requeuing.
 			 */
 			if (unlikely(!nolock_qdisc_is_empty(q))) {
-				rc = dev_qdisc_enqueue(skb, q, &to_free, txq);
+				rc = dev_qdisc_enqueue(skb, q, &to_free, txq, try_no_consume);
 				__qdisc_run(q);
 				qdisc_run_end(q);
 
@@ -4119,7 +4125,7 @@ static inline int __dev_xmit_skb(struct sk_buff *skb, struct Qdisc *q,
 			return NET_XMIT_SUCCESS;
 		}
 
-		rc = dev_qdisc_enqueue(skb, q, &to_free, txq);
+		rc = dev_qdisc_enqueue(skb, q, &to_free, txq, try_no_consume);
 		qdisc_run(q);
 
 no_lock_out:
@@ -4172,9 +4178,7 @@ no_lock_out:
 		qdisc_run_end(q);
 		rc = NET_XMIT_SUCCESS;
 	} else {
-		WRITE_ONCE(q->owner, smp_processor_id());
-		rc = dev_qdisc_enqueue(skb, q, &to_free, txq);
-		WRITE_ONCE(q->owner, -1);
+		rc = dev_qdisc_enqueue(skb, q, &to_free, txq, try_no_consume);
 		if (qdisc_run_begin(q)) {
 			if (unlikely(contended)) {
 				spin_unlock(&q->busylock);
@@ -4629,7 +4633,8 @@ struct netdev_queue *netdev_core_pick_tx(struct net_device *dev,
  * * positive qdisc return code	- NET_XMIT_DROP etc.
  * * negative errno		- other errors
  */
-int __dev_queue_xmit(struct sk_buff *skb, struct net_device *sb_dev)
+int __dev_queue_xmit(struct sk_buff *skb, struct net_device *sb_dev,
+		     int try_no_consume)
 {
 	struct net_device *dev = skb->dev;
 	struct netdev_queue *txq = NULL;
@@ -4688,7 +4693,7 @@ int __dev_queue_xmit(struct sk_buff *skb, struct net_device *sb_dev)
 
 	trace_net_dev_queue(skb);
 	if (q->enqueue) {
-		rc = __dev_xmit_skb(skb, q, dev, txq);
+		rc = __dev_xmit_skb(skb, q, dev, txq, try_no_consume);
 		goto out;
 	}
 
