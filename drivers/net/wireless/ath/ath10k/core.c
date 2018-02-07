@@ -3009,6 +3009,7 @@ static void ath10k_core_restart(struct work_struct *work)
 	 * with conf_mutex it will deadlock.
 	 */
 	cancel_work_sync(&ar->set_coverage_class_work);
+	cancel_work_sync(&ar->stop_scan_work);
 
 	mutex_lock(&ar->conf_mutex);
 
@@ -4389,6 +4390,7 @@ struct ath10k *ath10k_core_create(size_t priv_size, struct device *dev,
 	INIT_WORK(&ar->restart_work, ath10k_core_restart);
 	INIT_WORK(&ar->set_coverage_class_work,
 		  ath10k_core_set_coverage_class_work);
+	INIT_WORK(&ar->stop_scan_work, ath10k_wmi_stop_scan_work);
 
 	ar->napi_dev = alloc_netdev_dummy(0);
 	if (!ar->napi_dev)
