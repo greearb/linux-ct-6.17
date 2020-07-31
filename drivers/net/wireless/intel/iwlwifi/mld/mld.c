@@ -327,7 +327,7 @@ iwl_mld_configure_trans(struct iwl_op_mode *op_mode)
 	struct iwl_trans_config trans_cfg = {
 		.op_mode = op_mode,
 		/* Rx is not supported yet, but add it to avoid warnings */
-		.rx_buf_size = iwl_amsdu_size_to_rxb_size(),
+		.rx_buf_size = iwl_amsdu_size_to_rxb_size(mld->trans->trans_cfg->device_family),
 		.command_groups = iwl_mld_groups,
 		.command_groups_size = ARRAY_SIZE(iwl_mld_groups),
 		.fw_reset_handshake = true,
