@@ -1805,6 +1805,7 @@ struct station_parameters {
 	u8 supported_oper_classes_len;
 	int support_p2p_ps;
 	u16 airtime_weight;
+	u16 eml_capa;
 	struct link_station_parameters link_sta_params;
 };
 

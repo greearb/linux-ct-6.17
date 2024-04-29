@@ -2583,6 +2583,7 @@ struct ieee80211_sta {
 	bool mlo;
 	bool spp_amsdu;
 	u8 max_amsdu_subframes;
+	u16 eml_capa;
 
 	struct ieee80211_sta_aggregates *cur;
 
