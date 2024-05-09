@@ -1,0 +1,66 @@
+From 2618200a6c09229fff3eb05856d7e3d584fdb394 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Thu, 9 May 2024 09:24:43 +0800
+Subject: [PATCH 1195/1306] mtk: mac80211: legacy AP scan request should
+ contain valid channels
+
+In single-wiphy, if scan_freqs is not specified in scan request,
+mac80211 will trigger a scan that includes all bands.
+However, legacy AP should only scan the channels of its operating band.
+
+This commit adds the checks for including valid channels in legacy AP
+scan.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+
+preset_chandef is only set on the first wdev of each phy, so we refer to
+another data structure for the band of current wdev.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ net/wireless/nl80211.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/net/wireless/nl80211.c b/net/wireless/nl80211.c
+index fa7aa168444b..880cecdd7b0e 100644
+--- a/net/wireless/nl80211.c
++++ b/net/wireless/nl80211.c
+@@ -9697,6 +9697,14 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
+			pr_err("scan:  validate_scan_freqs failed, duplicate freq?\n");
+			return -EINVAL;
+		}
++	} else if (wdev->iftype == NL80211_IFTYPE_AP && !wdev->valid_links) {
++		struct ieee80211_channel *chan = wdev->links[0].ap.chandef.chan;
++		if (!chan || !wiphy->bands[chan->band]) {
++			pr_err("scan: AP and !valid links and !chan || band invalid\n");
++			return -EINVAL;
++		}
++
++		n_channels = wiphy->bands[chan->band]->n_channels;
+	} else {
+		n_channels = ieee80211_get_num_supported_channels(wiphy);
+	}
+@@ -9761,6 +9769,21 @@ static int nl80211_trigger_scan(struct sk_buff *skb, struct genl_info *info)
+			    !cfg80211_wdev_channel_allowed(wdev, chan))
+				continue;
+
++			request->channels[i] = chan;
++			i++;
++		}
++	} else if (wdev->iftype == NL80211_IFTYPE_AP && !wdev->valid_links) {
++		enum nl80211_band band = wdev->links[0].ap.chandef.chan->band;
++		int j;
++
++		for (j = 0; j < wiphy->bands[band]->n_channels; j++) {
++			struct ieee80211_channel *chan;
++
++			chan = &wiphy->bands[band]->channels[j];
++
++			if (chan->flags & IEEE80211_CHAN_DISABLED)
++				continue;
++
+			request->channels[i] = chan;
+			i++;
+		}
+--
+2.42.0
