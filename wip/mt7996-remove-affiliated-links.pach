@@ -48,6 +48,8 @@ Signed-off-by: Shayne Chen <shayne.chen@mediatek.com>
  .../wireless/mediatek/mt76/mt7996/testmode.c  |   7 +-
  9 files changed, 833 insertions(+), 199 deletions(-)
 
+NOTE:  Some of this was already applied. --Ben
+
 diff --git a/drivers/net/wireless/mediatek/mt76/mt7996/main.c b/drivers/net/wireless/mediatek/mt76/mt7996/main.c
 index e9e02240b6cb..20389519a1db 100644
 --- a/drivers/net/wireless/mediatek/mt76/mt7996/main.c
