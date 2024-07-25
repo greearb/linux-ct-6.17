@@ -6753,6 +6753,9 @@ enum nl80211_feature_flags {
  * @NL80211_EXT_FEATURE_SPP_AMSDU_SUPPORT: The driver has support for SPP
  *	(signaling and payload protected) A-MSDUs and this shall be advertised
  *	in the RSNXE.
+ * @NL80211_EXT_FEATURE_ETHTOOL_VDEV_STATS: The driver uses the alternate
+ *	ethtool string stat block which include per-vdev accumulator stats.
+ *	This flag is intended for use with IEEE802.11ac and older radios.
  *
  * @NL80211_EXT_FEATURE_BEACON_RATE_EHT: Driver supports beacon rate
  *	configuration (AP/mesh) with EHT rates.
@@ -6833,6 +6836,7 @@ enum nl80211_ext_feature_index {
 	NL80211_EXT_FEATURE_DFS_CONCURRENT,
 	NL80211_EXT_FEATURE_SPP_AMSDU_SUPPORT,
 	NL80211_EXT_FEATURE_BEACON_RATE_EHT,
+	NL80211_EXT_FEATURE_ETHTOOL_VDEV_STATS,
 
 	/* add new features before the definition below */
 	NUM_NL80211_EXT_FEATURES,
