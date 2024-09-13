@@ -1541,23 +1541,53 @@ u32 mt7996_wed_init_buf(void *ptr, dma_addr_t phys, int token_id)
 }
 
 static void
-mt7996_tx_check_aggr(struct ieee80211_link_sta *link_sta,
-		     struct mt76_wcid *wcid, struct sk_buff *skb)
+mt7996_check_tx_ba_status(struct mt76_wcid *wcid, u8 tid)
 {
-	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
-	struct ieee80211_sta *sta = wcid_to_sta(wcid);
-	bool is_8023 = info->flags & IEEE80211_TX_CTL_HW_80211_ENCAP;
-	u16 fc, tid;
+	struct ieee80211_sta *sta;
+	struct mt7996_sta *msta;
+	struct ieee80211_link_sta *link_sta;
+
+	if (!wcid)
+		return;
+
+	sta = wcid_to_sta(wcid);
+	msta = (struct mt7996_sta *)sta->drv_priv;
+
+	link_sta = rcu_dereference(sta->link[wcid->link_id]);
+	if (!link_sta)
+		return;
 
 	if (!sta->mlo && !(link_sta->ht_cap.ht_supported || link_sta->he_cap.has_he))
 		return;
+
+	if (test_bit(tid, &wcid->ampdu_state)) {
+		ieee80211_refresh_tx_agg_session_timer(sta, tid);
+		return;
+	}
+
+	if (!msta->last_addba_req_time[tid] ||
+	    time_after(jiffies, msta->last_addba_req_time[tid] + ADDBA_RETRY_PERIOD)) {
+		set_bit(tid, &wcid->ampdu_state);
+		if (ieee80211_start_tx_ba_session(sta, tid, 0) < 0)
+			clear_bit(tid, &wcid->ampdu_state);
+		msta->last_addba_req_time[tid] = jiffies;
+	}
+}
+
+static void
+mt7996_tx_check_aggr(struct ieee80211_sta *sta, struct sk_buff *skb,
+		     struct mt76_wcid *wcid)
+{
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	bool is_8023 = info->flags & IEEE80211_TX_CTL_HW_80211_ENCAP;
+	u16 fc, tid;
 
 	tid = skb->priority & IEEE80211_QOS_CTL_TID_MASK;
 
 	if (is_8023) {
 		fc = IEEE80211_FTYPE_DATA |
-		     (link_sta->sta->wme ? IEEE80211_STYPE_QOS_DATA
-					 : IEEE80211_STYPE_DATA);
+		     (sta->wme ? IEEE80211_STYPE_QOS_DATA
+		      : IEEE80211_STYPE_DATA);
 	} else {
 		/* No need to get precise TID for Action/Management Frame,
 		 * since it will not meet the following Frame Control
@@ -1573,8 +1603,7 @@ mt7996_tx_check_aggr(struct ieee80211_link_sta *link_sta,
 	if (unlikely(fc != (IEEE80211_FTYPE_DATA | IEEE80211_STYPE_QOS_DATA)))
 		return;
 
-	if (!test_and_set_bit(tid, &wcid->ampdu_state))
-		ieee80211_start_tx_ba_session(link_sta->sta, tid, 0);
+	mt7996_check_tx_ba_status(wcid, tid);
 }
 
 static void
@@ -1600,8 +1629,11 @@ mt7996_txwi_free(struct mt7996_dev *dev, struct mt76_txwi_cache *t,
 	txwi = (__le32 *)mt76_get_txwi_ptr(mdev, t);
 	if (link_sta) {
 		wcid_idx = wcid->idx;
-		if (likely(t->skb->protocol != cpu_to_be16(ETH_P_PAE)))
-			mt7996_tx_check_aggr(link_sta, wcid, t->skb);
+		if (likely(t->skb->protocol != cpu_to_be16(ETH_P_PAE))) {
+			struct ieee80211_sta *sta = wcid_to_sta(wcid);
+
+			mt7996_tx_check_aggr(sta, t->skb, wcid);
+		}
 	} else {
 		wcid_idx = le32_get_bits(txwi[9], MT_TXD9_WLAN_IDX);
 	}
@@ -1898,12 +1930,11 @@ mt7996_mac_add_txs_skb(struct mt7996_dev *dev, struct mt76_wcid *wcid,
 	}
 
 	if (mtk_wed_device_active(&dev->mt76.mmio.wed) && wcid->sta) {
-		struct ieee80211_sta *sta;
-		u8 tid;
-
-		sta = wcid_to_sta(wcid);
-		tid = FIELD_GET(MT_TXS0_TID, txs);
-		ieee80211_refresh_tx_agg_session_timer(sta, tid);
+		/* Do not check TX BA status for mgmt frames which are sent at a
+		 * fixed rate
+		 */
+		if (!le32_get_bits(txs_data[3], MT_TXS3_FIXED_RATE))
+			mt7996_check_tx_ba_status(wcid, FIELD_GET(MT_TXS0_TID, txs));
 	}
 
 	txrate = FIELD_GET(MT_TXS0_TX_RATE, txs);
