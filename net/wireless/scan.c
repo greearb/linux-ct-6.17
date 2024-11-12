@@ -1079,7 +1079,10 @@ int cfg80211_scan(struct cfg80211_registered_device *rdev)
 
 	if (!(rdev->wiphy.flags & WIPHY_FLAG_SPLIT_SCAN_6GHZ)) {
 		rdev_req->req.first_part = true;
-		return rdev_scan(rdev, rdev_req);
+		err = rdev_scan(rdev, rdev_req);
+		if (err)
+			pr_err("cfg80211-scan: rdev-scan, no SPLIT_SCAN_6GHZ: %d\n", err);
+		return err;
 	}
 
 	for (i = 0; i < rdev_req->req.n_channels; i++) {
