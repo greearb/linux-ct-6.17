@@ -1701,29 +1701,15 @@ static u32 iwl_nvm_get_regdom_bw_flags(const u16 *nvm_chan,
 		if (!reg_capa.allow_160mhz)
 			flags |= NL80211_RRF_NO_160MHZ;
 
-		if (!reg_capa.allow_320mhz) {
-			static bool warned_320 = false;
-
-			if (!warned_320) {
-				pr_warn("%s: blocking reg_capa disable of 320MHz", cfg->name);
-				warned_320 = true;
-			}
-			// flags |= NL80211_RRF_NO_320MHZ;
-		}
+		if (!reg_capa.allow_320mhz)
+			flags |= NL80211_RRF_NO_320MHZ;
 	}
 
 	if (reg_capa.disable_11ax)
 		flags |= NL80211_RRF_NO_HE;
 
-	if (reg_capa.disable_11be) {
-		static bool warned_be = false;
-
-		if (!warned_be) {
-			pr_warn("%s: blocking reg_capa disable of 11be", cfg->name);
-			warned_be = true;
-		}
-		// flags |= NL80211_RRF_NO_EHT;
-	}
+	if (reg_capa.disable_11be)
+		flags |= NL80211_RRF_NO_EHT;
 
 	return flags;
 }
