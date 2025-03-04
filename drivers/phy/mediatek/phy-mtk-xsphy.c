@@ -592,7 +592,7 @@ static int mtk_xsphy_probe(struct platform_device *pdev)
 
 		retval = phy_type_syscon_get(inst, child_np);
 		if (retval)
-			goto put_child;
+			return retval;
 	}
 
 	provider = devm_of_phy_provider_register(dev, mtk_phy_xlate);
