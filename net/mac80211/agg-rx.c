@@ -80,6 +80,8 @@ void __ieee80211_stop_rx_ba_session(struct sta_info *sta, u16 tid,
 	RCU_INIT_POINTER(sta->ampdu_mlme.tid_rx[tid], NULL);
 	__clear_bit(tid, sta->ampdu_mlme.agg_session_valid);
 
+	params.ndp = tid_rx ? tid_rx->ndp : false;
+
 	ht_dbg(sta->sdata,
 	       "Rx BA session stop requested for %pM tid %u %s reason: %d\n",
 	       sta->sta.addr, tid,
@@ -94,7 +96,7 @@ void __ieee80211_stop_rx_ba_session(struct sta_info *sta, u16 tid,
 	/* check if this is a self generated aggregation halt */
 	if (initiator == WLAN_BACK_RECIPIENT && tx)
 		ieee80211_send_delba(sta->sdata, sta->sta.addr,
-				     tid, WLAN_BACK_RECIPIENT, reason);
+				     tid, params.ndp, WLAN_BACK_RECIPIENT, reason);
 
 	/*
 	 * return here in case tid_rx is not assigned - which will happen if
@@ -229,7 +231,7 @@ free:
 
 static void ieee80211_send_addba_resp(struct sta_info *sta, u8 *da, u16 tid,
 				      u8 dialog_token, u16 status, u16 policy,
-				      u16 buf_size, u16 timeout,
+				      u16 buf_size, u16 timeout, bool ndp,
 				      const u8 req_addba_ext_data)
 {
 	struct ieee80211_sub_if_data *sdata = sta->sdata;
@@ -250,7 +252,8 @@ static void ieee80211_send_addba_resp(struct sta_info *sta, u8 *da, u16 tid,
 
 	skb_put(skb, 1 + sizeof(mgmt->u.action.u.addba_resp));
 	mgmt->u.action.category = WLAN_CATEGORY_BACK;
-	mgmt->u.action.u.addba_resp.action_code = WLAN_ACTION_ADDBA_RESP;
+	mgmt->u.action.u.addba_resp.action_code = ndp ?
+			WLAN_ACTION_NDP_ADDBA_RESP : WLAN_ACTION_ADDBA_RESP;
 	mgmt->u.action.u.addba_resp.dialog_token = dialog_token;
 
 	capab = u16_encode_bits(amsdu, IEEE80211_ADDBA_PARAM_AMSDU_MASK);
@@ -271,7 +274,7 @@ static void ieee80211_send_addba_resp(struct sta_info *sta, u8 *da, u16 tid,
 void __ieee80211_start_rx_ba_session(struct sta_info *sta,
 				     u8 dialog_token, u16 timeout,
 				     u16 start_seq_num, u16 ba_policy, u16 tid,
-				     u16 buf_size, bool tx, bool auto_seq,
+				     u16 buf_size, bool tx, bool auto_seq, bool ndp,
 				     const u8 addba_ext_data)
 {
 	struct ieee80211_local *local = sta->sdata->local;
@@ -282,6 +285,7 @@ void __ieee80211_start_rx_ba_session(struct sta_info *sta,
 		.tid = tid,
 		.amsdu = false,
 		.timeout = timeout,
+		.ndp = ndp,
 		.ssn = start_seq_num,
 	};
 	int i, ret = -EOPNOTSUPP;
@@ -305,6 +309,11 @@ void __ieee80211_start_rx_ba_session(struct sta_info *sta,
 		       "STA %pM erroneously requests BA session on tid %d w/o HT\n",
 		       sta->sta.addr, tid);
 		/* send a response anyway, it's an error case if we get here */
+		goto end;
+	}
+
+	if (ndp && !ieee80211_hw_check(&local->hw, SUPPORTS_NDP_BLOCKACK)) {
+		ht_dbg(sta->sdata, "Requested NDP BA but HW does not support it\n");
 		goto end;
 	}
 
@@ -441,6 +450,7 @@ void __ieee80211_start_rx_ba_session(struct sta_info *sta,
 	tid_agg_rx->started = false;
 	tid_agg_rx->reorder_buf_filtered = 0;
 	tid_agg_rx->tid = tid;
+	tid_agg_rx->ndp = params.ndp;
 	tid_agg_rx->sta = sta;
 	status = WLAN_STATUS_SUCCESS;
 
@@ -462,7 +472,7 @@ end:
 	if (tx)
 		ieee80211_send_addba_resp(sta, sta->sta.addr, tid,
 					  dialog_token, status, 1, buf_size,
-					  timeout, addba_ext_data);
+					  timeout, params.ndp, addba_ext_data);
 }
 
 void ieee80211_process_addba_request(struct ieee80211_local *local,
@@ -472,6 +482,8 @@ void ieee80211_process_addba_request(struct ieee80211_local *local,
 {
 	u16 capab, tid, timeout, ba_policy, buf_size, start_seq_num;
 	u8 dialog_token, addba_ext_data;
+	int ies_len;
+	bool ndp_ba;
 
 	/* extract session parameters from addba request frame */
 	dialog_token = mgmt->u.action.u.addba_req.dialog_token;
@@ -483,6 +495,7 @@ void ieee80211_process_addba_request(struct ieee80211_local *local,
 	ba_policy = (capab & IEEE80211_ADDBA_PARAM_POLICY_MASK) >> 1;
 	tid = (capab & IEEE80211_ADDBA_PARAM_TID_MASK) >> 2;
 	buf_size = (capab & IEEE80211_ADDBA_PARAM_BUF_SIZE_MASK) >> 6;
+	ndp_ba = (mgmt->u.action.u.addba_req.action_code == WLAN_ACTION_NDP_ADDBA_REQ);
 
 	addba_ext_data =
 		ieee80211_retrieve_addba_ext_data(sta,
@@ -494,7 +507,8 @@ void ieee80211_process_addba_request(struct ieee80211_local *local,
 
 	__ieee80211_start_rx_ba_session(sta, dialog_token, timeout,
 					start_seq_num, ba_policy, tid,
-					buf_size, true, false, addba_ext_data);
+					buf_size, true, false, ndp_ba,
+					addba_ext_data);
 }
 
 void ieee80211_manage_rx_ba_offl(struct ieee80211_vif *vif,
