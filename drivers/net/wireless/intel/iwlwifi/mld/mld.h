@@ -334,6 +334,8 @@ struct iwl_mld {
 	struct iwl_mcast_filter_cmd *mcast_filter_cmd;
 
 	u8 mgmt_tx_ant;
+	u8 set_tx_ant;
+	u8 set_rx_ant;
 
 	struct iwl_mld_low_latency low_latency;
 
