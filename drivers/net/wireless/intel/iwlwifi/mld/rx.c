@@ -145,16 +145,44 @@ EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(iwl_mld_pass_packet_to_mac80211);
 
 static void iwl_mld_fill_signal(struct iwl_mld *mld,
 				struct ieee80211_rx_status *rx_status,
-				struct iwl_mld_rx_phy_data *phy_data)
+				struct iwl_mld_rx_phy_data *phy_data,
+				struct ieee80211_sta *sta,
+				bool is_beacon, bool my_beacon)
 {
 	u32 rate_n_flags = phy_data->rate_n_flags;
 	int energy_a = phy_data->energy_a;
 	int energy_b = phy_data->energy_b;
 	int max_energy;
+	struct iwl_mld_sta *mld_sta = NULL;
+
+	if (sta && !(is_beacon && !my_beacon)) {
+		mld_sta = iwl_mld_sta_from_mac80211(sta);
+		/* In cases of OFDM encodings (and maybe other cases), energy is
+		 * reported for each chain, but we do not want to average the weak
+		 * chain since it will average in a false weak reading.
+		 */
+		if (rx_status->nss >= 2) {
+			if (energy_a)
+				ewma_signal_add(&mld_sta->rx_avg_chain_signal[0], energy_a);
+			if (energy_b)
+				ewma_signal_add(&mld_sta->rx_avg_chain_signal[1], energy_b);
+		} else {
+			/* Here, energy_x is log(reference/signal), and so is the inverse
+			 * of what we typically expect when reading RSSI, hence this
+			 * comparison is done in an unexpected direction.
+			 */
+			if (energy_a && energy_a <= energy_b)
+				ewma_signal_add(&mld_sta->rx_avg_chain_signal[0], energy_a);
+			else if (energy_b)
+				ewma_signal_add(&mld_sta->rx_avg_chain_signal[1], energy_b);
+		}
+	}
 
 	energy_a = energy_a ? -energy_a : S8_MIN;
 	energy_b = energy_b ? -energy_b : S8_MIN;
-	max_energy = max(energy_a, energy_b);
+
+	/* use DB summing to get better RSSI reporting */
+	max_energy = iwl_mld_sum_sigs_2(energy_a, energy_b);
 
 	IWL_DEBUG_STATS(mld, "energy in A %d B %d, and max %d\n",
 			energy_a, energy_b, max_energy);
@@ -164,6 +192,15 @@ static void iwl_mld_fill_signal(struct iwl_mld *mld,
 	    (rate_n_flags & RATE_MCS_ANT_AB_MSK) >> RATE_MCS_ANT_POS;
 	rx_status->chain_signal[0] = energy_a;
 	rx_status->chain_signal[1] = energy_b;
+
+	if (mld_sta) {
+		if (is_beacon) {
+			if (my_beacon)
+				ewma_signal_add(&mld_sta->rx_avg_beacon_signal, -max_energy);
+		} else {
+			ewma_signal_add(&mld_sta->rx_avg_signal, -max_energy);
+		}
+	}
 }
 
 static void
@@ -1180,7 +1217,7 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 				   struct iwl_mld_rx_phy_data *phy_data,
 				   struct iwl_rx_mpdu_desc *mpdu_desc,
 				   struct ieee80211_hdr *hdr,
-				   int queue)
+				   int queue, struct ieee80211_sta *sta)
 {
 	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
 	u32 format = phy_data->rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
@@ -1188,6 +1225,8 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	u8 stbc = u32_get_bits(rate_n_flags, RATE_MCS_STBC_MSK);
 	bool is_sgi = rate_n_flags & RATE_MCS_SGI_MSK;
 	bool bw_set = false;
+	bool is_beacon;
+	bool my_beacon = false;
 
 	if (WARN_ON_ONCE(phy_data->with_data && (!mpdu_desc || !hdr)))
 		return;
@@ -1237,7 +1276,12 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	    phy_data->phy_info & IWL_RX_MPDU_PHY_SHORT_PREAMBLE)
 		rx_status->enc_flags |= RX_ENC_FLAG_SHORTPRE;
 
-	iwl_mld_fill_signal(mld, rx_status, phy_data);
+	is_beacon = hdr && (ieee80211_is_beacon(hdr->frame_control));
+	if (is_beacon && sta) {
+		/* see if it is beacon destined for us */
+		if (memcmp(sta->addr, hdr->addr2, ETH_ALEN) == 0)
+			my_beacon = true;
+	}
 
 	/* must be before L-SIG data */
 	if (format == RATE_MCS_HE_MSK)
@@ -1290,6 +1334,7 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 	case RATE_MCS_HT_MSK:
 		rx_status->encoding = RX_ENC_HT;
 		rx_status->rate_idx = RATE_HT_MCS_INDEX(rate_n_flags);
+		rx_status->nss = rx_status->rate_idx / 8 + 1;
 		rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
 		mld->ethtool_stats.rx_mode[2]++;
 		mld->ethtool_stats.rx_nss[(rx_status->rate_idx / 8)]++;
@@ -1331,6 +1376,7 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 				mld->ethtool_stats.rx_mode[1]++;
 			mld->ethtool_stats.rx_nss[0]++;
 			mld->ethtool_stats.rx_mcs[rx_status->rate_idx]++;
+			rx_status->nss = 1;
 			break;
 		}
 
@@ -1343,6 +1389,11 @@ static void iwl_mld_rx_fill_status(struct iwl_mld *mld, struct sk_buff *skb,
 		break;
 		}
 	}
+
+	/* Depends on rx_status->nss being configured properly, call this at
+	 * bottom of this method.
+	 */
+	iwl_mld_fill_signal(mld, rx_status, phy_data, sta, is_beacon, my_beacon);
 }
 
 /* iwl_mld_create_skb adds the rxb to a new skb */
@@ -1906,7 +1957,7 @@ void iwl_mld_rx_mpdu(struct iwl_mld *mld, struct napi_struct *napi,
 		iwl_mld_count_rx_histogram(mld);
 	mld->monitor.rx_this_ampdu_count++;
 
-	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue);
+	iwl_mld_rx_fill_status(mld, skb, &phy_data, mpdu_desc, hdr, queue, sta);
 
 	if (iwl_mld_rx_crypto(mld, sta, hdr, rx_status, mpdu_desc, queue,
 			      le32_to_cpu(pkt->len_n_flags), &crypto_len)) {
@@ -2120,7 +2171,7 @@ void iwl_mld_rx_monitor_no_data(struct iwl_mld *mld, struct napi_struct *napi,
 	rx_status->freq = ieee80211_channel_to_frequency(phy_data.channel,
 							 rx_status->band);
 
-	iwl_mld_rx_fill_status(mld, skb, &phy_data, NULL, NULL, queue);
+	iwl_mld_rx_fill_status(mld, skb, &phy_data, NULL, NULL, queue, NULL);
 
 	/* No more radiotap info should be added after this point.
 	 * Mark it as mac header for upper layers to know where
