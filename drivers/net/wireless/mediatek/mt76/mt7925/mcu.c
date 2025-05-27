@@ -1925,7 +1925,7 @@ mt7925_mcu_sta_cmd(struct mt76_phy *phy,
 				    CONN_STATE_DISCONNECT;
 
 	if (info->enable && info->link_sta) {
-		mt76_connac_mcu_sta_basic_tlv(dev, skb, info->link_conf,
+		mt76_connac_mcu_sta_basic_tlv(dev, skb, info->vif, info->link_conf,
 					      info->link_sta,
 					      conn_state, info->newly);
 		mt7925_mcu_sta_phy_tlv(skb, info->vif, info->link_sta);
