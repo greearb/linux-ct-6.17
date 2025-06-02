@@ -1264,6 +1264,8 @@ enum MTK_DEUBG {
 	MT76_DBG_STA	 	= 0x00000400, /* STA related, upstream format */
 	MT76_DBG_BSS	 	= 0x00000800, /* BSS related, upstream format */
 	MT76_DBG_DEV	 	= 0x00001000, /* DEV related, upstream format */
+	MT76_DBG_SCAN           = 0x00002000, /* Scan related, upstream format */
+        MT76_DBG_CHAN           = 0x00004000, /* Channel related, upstream format */
 	MTK_DEBUG_ANY		= 0xffffffff
 };
 

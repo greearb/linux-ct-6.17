@@ -39,6 +39,7 @@ mt76_scan_send_probe(struct mt76_dev *dev, struct cfg80211_ssid *ssid)
 	struct mt76_phy *phy = dev->scan.phy;
 	struct ieee80211_tx_info *info;
 	struct sk_buff *skb;
+	struct ieee80211_hdr *hdr;
 
 	if (WARN_ON_ONCE((unsigned long)(mvif) < 4000)) {
 		pr_err("scan-send-probe: mvif: %p\n", mvif);
@@ -54,9 +55,8 @@ mt76_scan_send_probe(struct mt76_dev *dev, struct cfg80211_ssid *ssid)
 	if (!skb)
 		return;
 
+	hdr = (struct ieee80211_hdr *)skb->data;
 	if (is_unicast_ether_addr(req->bssid)) {
-		struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)skb->data;
-
 		ether_addr_copy(hdr->addr1, req->bssid);
 		ether_addr_copy(hdr->addr3, req->bssid);
 	}
@@ -78,6 +78,9 @@ mt76_scan_send_probe(struct mt76_dev *dev, struct cfg80211_ssid *ssid)
 	if (req->no_cck)
 		info->flags |= IEEE80211_TX_CTL_NO_CCK_RATE;
 	info->control.flags |= IEEE80211_TX_CTRL_DONT_USE_RATE_MASK;
+
+	mt76_dbg(dev, MT76_DBG_CHAN, "%s: scan probe req, vif->addr: %pM  addr1: %pM addr2: %pM  addr3: %pM\n",
+		 __func__, vif->addr, hdr->addr1, hdr->addr2, hdr->addr3);
 
 	mt76_tx(phy, NULL, mvif->wcid, skb);
 
