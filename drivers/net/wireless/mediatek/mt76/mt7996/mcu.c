@@ -1252,7 +1252,8 @@ mt7996_mcu_bss_ifs_timing_tlv(struct sk_buff *skb, struct mt7996_phy *phy)
 }
 
 static int
-mt7996_mcu_bss_basic_tlv(struct sk_buff *skb,
+mt7996_mcu_bss_basic_tlv(struct mt7996_dev *dev,
+			 struct sk_buff *skb,
 			 struct ieee80211_vif *vif,
 			 struct ieee80211_bss_conf *link_conf,
 			 struct mt76_vif_link *mvif,
@@ -1276,6 +1277,9 @@ mt7996_mcu_bss_basic_tlv(struct sk_buff *skb,
 		if (enable) {
 			rcu_read_lock();
 			sta = ieee80211_find_sta(vif, vif->bss_conf.bssid);
+			mt76_dbg(&dev->mt76, MT76_DBG_BSS,
+				 "%s: wlan_idx: %d find_sta returned: %p  link_conf->bssid: %pM\n",
+				 __func__, wlan_idx, sta, link_conf->bssid);
 			/* TODO: enable BSS_INFO_UAPSD & BSS_INFO_PM */
 			if (sta) {
 				struct mt76_wcid *wcid;
@@ -1364,7 +1368,7 @@ int mt7996_mcu_add_bss_info(struct mt7996_phy *phy, struct ieee80211_vif *vif,
 		return PTR_ERR(skb);
 
 	/* bss_basic must be first */
-	mt7996_mcu_bss_basic_tlv(skb, vif, link_conf, mlink, phy->mt76,
+	mt7996_mcu_bss_basic_tlv(dev, skb, vif, link_conf, mlink, phy->mt76,
 				 msta_link->wcid.idx, enable);
 	mt7996_mcu_bss_sec_tlv(skb, mlink);
 
