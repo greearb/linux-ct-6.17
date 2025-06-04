@@ -1929,7 +1929,6 @@ int mt7996_init_band_debugfs(struct mt7996_phy *phy)
 			    &mt7996_hw_queues_fops);
 	debugfs_create_file("xmit-queues", 0400, dir, phy,
 			    &mt7996_xmit_queues_fops);
-	debugfs_create_file("phy_info", 0400, dir, phy, &mt7996_phy_info_fops);
 	debugfs_create_file("sys_recovery", 0600, dir, phy,
 			    &mt7996_sys_recovery_ops);
 	debugfs_create_file("rxfilter", 0400, dir, phy, &mt7996_rxfilter_fops);
@@ -1972,6 +1971,8 @@ int mt7996_init_dev_debugfs(struct mt7996_phy *phy)
 			   &dev->ignore_radar);
 	debugfs_create_file("set_rate_override", 0600, dir,
 			    dev, &fops_set_rate_override);
+
+	debugfs_create_file("phy_info", 0400, dir, dev, &mt7996_phy_info_fops);
 
 	debugfs_create_file("txpower_level", 0600, dir, dev, &fops_txpower_level);
 	debugfs_create_file("txpower_info", 0600, dir, dev, &mt7996_txpower_info_fops);
