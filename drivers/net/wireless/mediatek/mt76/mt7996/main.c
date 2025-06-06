@@ -185,6 +185,10 @@ static int get_omac_idx(enum nl80211_iftype type, u64 mask)
 		if (i)
 			return i - 1;
 
+		i = get_free_idx(mask, REPEATER_BSSID_START, REPEATER_BSSID_MAX);
+		if (i)
+			return i - 1;
+
 		if (~mask & BIT(HW_BSSID_0))
 			return HW_BSSID_0;
 
@@ -374,12 +378,16 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 		 "%s:  vif_link_add called, link_id: %d.\n",
 		 __func__, it.link_id);
 
-	mlink->idx = find_first_zero_bit(dev->mt76.vif_mask, MT76_MAX_VIFS);
-	if (mlink->idx >= mt7996_max_interface_num(dev))
-		return -ENOSPC;
-
 	idx = get_omac_idx(vif->type, phy->omac_mask);
 	if (idx < 0)
+		return -ENOSPC;
+
+	if (idx < REPEATER_BSSID_START)
+		mlink->idx = find_first_zero_bit(dev->mt76.vif_mask, MT7996_FIRST_REPEATER_VIF_IDX);
+	else
+		mlink->idx = find_next_zero_bit(dev->mt76.vif_mask, MT76_MAX_VIFS,
+						MT7996_FIRST_REPEATER_VIF_IDX);
+	if (mlink->idx >= mt7996_max_interface_num(dev))
 		return -ENOSPC;
 
 	if (!dev->mld_idx_mask) { /* first link in the group */
@@ -399,6 +407,9 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	mlink->wmm_idx = vif->type == NL80211_IFTYPE_AP ? 0 : 3;
 	mlink->wcid = &msta_link->wcid;
 	mlink->wcid->offchannel = mlink->offchannel;
+
+	if (mlink->omac_idx >= REPEATER_BSSID_START)
+		mlink->bss_idx = MT7996_FIRST_REPEATER_VIF_IDX + band_idx + 1;
 
 	ret = mt7996_mcu_add_dev_info(phy, vif, link_conf, mlink, true);
 	if (ret)
