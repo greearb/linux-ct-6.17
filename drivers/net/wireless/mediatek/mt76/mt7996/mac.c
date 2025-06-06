@@ -1562,6 +1562,12 @@ int mt7996_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 		txp->fw.bss_idx = mlink ? mlink->idx : mvif->deflink.mt76.idx;
 	}
 
+	// TODO: RORY:  I'm not sure how to merge this properly with the above --Ben
+	if (mconf->mt76.bss_idx)
+		txp->fw.bss_idx = mconf->mt76.bss_idx - 1;
+	else
+		txp->fw.bss_idx = mconf->mt76.idx;
+
 	txp->fw.token = cpu_to_le16(id);
 	txp->fw.rept_wds_wcid = cpu_to_le16(sta ? wcid->idx : 0xfff);
 
