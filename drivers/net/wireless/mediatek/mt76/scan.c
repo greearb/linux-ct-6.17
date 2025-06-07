@@ -113,8 +113,11 @@ void mt76_scan_work(struct work_struct *work)
 
 	duration = HZ / 16; /* ~60 ms */
 	local_bh_disable();
-	for (i = 0; i < req->n_ssids; i++)
+	for (i = 0; i < req->n_ssids; i++) {
+		mt76_dbg(dev, MT76_DBG_SCAN, "%s: Sending probe request to %s\n",
+			 __func__, req->ssids[i].ssid);
 		mt76_scan_send_probe(dev, &req->ssids[i]);
+	}
 	local_bh_enable();
 
 out:
