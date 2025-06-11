@@ -157,7 +157,7 @@ static void mt7996_stop(struct ieee80211_hw *hw, bool suspend)
 	cancel_delayed_work_sync(&dev->scs_work);
 }
 
-static inline int get_free_idx(u32 mask, u8 start, u8 end)
+static inline int get_free_idx(u64 mask, u8 start, u8 end)
 {
 	return ffs(~mask & GENMASK(end, start));
 }
