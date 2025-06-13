@@ -5,6 +5,7 @@
 
 #include <linux/etherdevice.h>
 #include <linux/timekeeping.h>
+#include <linux/minmax.h>
 #include "coredump.h"
 #include "mt7996.h"
 #include "../dma.h"
@@ -1446,6 +1447,7 @@ int mt7996_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 
 	t = (struct mt76_txwi_cache *)(txwi + mdev->drv->txwi_size);
 	t->skb = tx_info->skb;
+	t->wcid = wcid->idx;
 
 	id = mt76_token_consume(mdev, &t);
 	if (id < 0) {
@@ -1763,6 +1765,7 @@ mt7996_mac_tx_free(struct mt7996_dev *dev, void *data, int len)
 	struct mt76_phy *phy2 = mdev->phys[MT_BAND1];
 	struct mt76_phy *phy3 = mdev->phys[MT_BAND2];
 	struct ieee80211_link_sta *link_sta = NULL;
+	struct mt7996_phy *mphy;
 	struct mt76_txwi_cache *txwi;
 	struct mt76_wcid *wcid = NULL;
 	LIST_HEAD(free_list);
@@ -1770,7 +1773,11 @@ mt7996_mac_tx_free(struct mt7996_dev *dev, void *data, int len)
 	void *end = data + len;
 	bool wake = false;
 	u16 total, count = 0;
-	u8 ver;
+	u8 ver, status;
+	enum {
+		INVALID_WLAN_ID,
+		INVALID_MSDU_ID,
+	};
 
 	/* clean DMA queues and unmap buffers first */
 	mt76_queue_tx_cleanup(dev, dev->mphy.q_tx[MT_TXQ_PSD], false);
@@ -1895,6 +1902,21 @@ next:
 
 			mt7996_txwi_free(dev, txwi, link_sta, wcid,
 					 &free_list, tx_cnt, tx_status, ampdu);
+
+			mphy = __mt7996_phy(dev, txwi->phy_idx);
+			if (!mphy)
+				continue;
+
+			switch (status) {
+			case 1:
+				mphy->hw_drop++;
+				break;
+			case 2:
+				mphy->mcu_drop++;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 
