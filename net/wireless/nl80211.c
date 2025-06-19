@@ -874,6 +874,7 @@ static const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_EPCS] = { .type = NLA_FLAG },
 	[NL80211_ATTR_ASSOC_MLD_EXT_CAPA_OPS] = { .type = NLA_U16 },
 	[NL80211_ATTR_WIPHY_RADIO_INDEX] = { .type = NLA_U8 },
+	[NL80211_ATTR_WIPHY_RADIO_INDEX_HACK] = { .type = NLA_U8 },
 	[NL80211_ATTR_S1G_LONG_BEACON_PERIOD] = NLA_POLICY_MIN(NLA_U8, 2),
 	[NL80211_ATTR_S1G_SHORT_BEACON] =
 		NLA_POLICY_NESTED(nl80211_s1g_short_beacon),
@@ -3739,6 +3740,18 @@ static int nl80211_set_wiphy(struct sk_buff *skb, struct genl_info *info)
 
 		radio_idx = nla_get_u8(
 				info->attrs[NL80211_ATTR_WIPHY_RADIO_INDEX]);
+		if (radio_idx >= rdev->wiphy.n_radio)
+			return -EINVAL;
+
+		return nl80211_set_wiphy_radio(info, rdev, radio_idx);
+	}
+	else if (info->attrs[NL80211_ATTR_WIPHY_RADIO_INDEX_HACK]) {
+		/* Radio idx is not expected for non-multi radio wiphy */
+		if (rdev->wiphy.n_radio <= 0)
+			return -EINVAL;
+
+		radio_idx = nla_get_u8(
+				info->attrs[NL80211_ATTR_WIPHY_RADIO_INDEX_HACK]);
 		if (radio_idx >= rdev->wiphy.n_radio)
 			return -EINVAL;
 
