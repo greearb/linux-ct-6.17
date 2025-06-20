@@ -126,6 +126,11 @@ struct wiphy;
  * @IEEE80211_CHAN_NO_4MHZ: 4 MHz bandwidth is not permitted on this channel.
  * @IEEE80211_CHAN_NO_8MHZ: 8 MHz bandwidth is not permitted on this channel.
  * @IEEE80211_CHAN_NO_16MHZ: 16 MHz bandwidth is not permitted on this channel.
+ *	even if it is otherwise disabled.
+ * @IEEE80211_CHAN_ALLOW_6GHZ_VLP_AP: Allow using this channel for AP operation
+ *	with very low power (VLP), even if otherwise set to NO_IR.
+ * @IEEE80211_CHAN_IGNORE: Mark this channel as disabled when
+ *	communicating channel list via nl80211.
  */
 enum ieee80211_channel_flags {
 	IEEE80211_CHAN_DISABLED			= BIT(0),
@@ -155,6 +160,7 @@ enum ieee80211_channel_flags {
 	IEEE80211_CHAN_NO_4MHZ			= BIT(28),
 	IEEE80211_CHAN_NO_8MHZ			= BIT(29),
 	IEEE80211_CHAN_NO_16MHZ			= BIT(30),
+	IEEE80211_CHAN_IGNORE			= BIT(31),
 };
 
 #define IEEE80211_CHAN_NO_HT40 \
