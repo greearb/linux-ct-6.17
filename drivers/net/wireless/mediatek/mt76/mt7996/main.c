@@ -20,6 +20,7 @@ MODULE_PARM_DESC(debug_lvl,
 		 "0x00040	block-ack and aggregation related\n"
 		 "0x00080	verbose rx path\n"
 		 "0x00100	Last n messages to MCU when something goes wrong\n"
+		 "0x08000	Verbose MCU debugging\n"
 		 "0xffffffff	any/all\n"
 	);
 
