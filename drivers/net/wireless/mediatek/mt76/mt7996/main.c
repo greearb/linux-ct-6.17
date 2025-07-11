@@ -588,8 +588,9 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	struct mt7996_dev *dev = phy->dev;
 	u8 band_idx = phy->mt76->band_idx;
 	struct mt76_txq *mtxq;
-	int idx, ret;
+	int i, idx, ret;
 	u8 link_id = link_conf->link_id;
+	u64 vif_mask;
 
 	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
 		 "%s:  vif_link_add called, link_id: %d.\n",
@@ -609,18 +610,6 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	mlink = &link->mt76;
 	msta_link = &link->msta_link;
 
-	if (dev->mt76.vif_mask[0] != 0xffffffffffffffff)
-		mlink->idx = __ffs64(~dev->mt76.vif_mask[0]);
-	else if (dev->mt76.vif_mask[1] != 0xffffffffffffffff)
-		mlink->idx = __ffs64(~dev->mt76.vif_mask[1]) + 64;
-	else
-		mlink->idx = __ffs64(~dev->mt76.vif_mask[2]) + 128;
-
-	if (mlink->idx >= mt7996_max_interface_num(dev)) {
-		ret = -ENOSPC;
-		goto error;
-	}
-
 	if (phy->omac_mask == 0xFFFFFFFF)
 		phy->omac_mask = 0;
 
@@ -630,8 +619,20 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 		goto error;
 	}
 
-	mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: Selected OMAC index %d\n",
-		 __func__, idx);
+	for (i = 0; i < ARRAY_SIZE(dev->mt76.vif_mask); i++) {
+		vif_mask = dev->mt76.vif_mask[i];
+
+		if (vif_mask != ~0ull) {
+			mlink->idx = __ffs64(~vif_mask) + i * 64;
+			break;
+		}
+	}
+
+	if (mlink->idx >= mt7996_max_interface_num(dev) ||
+	    i >= ARRAY_SIZE(dev->mt76.vif_mask)) {
+		ret = -ENOSPC;
+		goto error;
+	}
 
 	if (dev->sta_omac_repeater_bssid_enable) {
 		if (BIT_ULL(idx) & __GENMASK_ULL(REPEATER_BSSID_MAX, REPEATER_BSSID_START)) {
@@ -644,6 +645,9 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 			mt7996_remove_headless_vif(phy);
 		}
 	}
+
+	mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: omac_idx=%d, link_idx=%d\n",
+		 __func__, idx, mlink->idx);
 
 	/* Below code seems to be testmode only, re-enable when we bring that patch in */
 	///* bss idx & omac idx should be set to band idx for ibf cal */
@@ -685,12 +689,7 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	if (ret)
 		goto error;
 
-	if (mlink->idx > 127)
-		dev->mt76.vif_mask[2] |= BIT_ULL(mlink->idx - 128);
-	else if (mlink->idx > 63)
-		dev->mt76.vif_mask[1] |= BIT_ULL(mlink->idx - 64);
-	else
-		dev->mt76.vif_mask[0] |= BIT_ULL(mlink->idx);
+	dev->mt76.vif_mask[mlink->idx / 64] |= BIT_ULL(mlink->idx % 64);
 
 	phy->omac_mask |= BIT_ULL(mlink->omac_idx);
 
