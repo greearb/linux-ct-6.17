@@ -686,18 +686,8 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	mlink->wmm_idx = vif->type == NL80211_IFTYPE_AP ? 0 : 3;
 	mlink->wcid = &msta_link->wcid;
 
-	if (dev->sta_omac_repeater_bssid_enable) {
-		if (idx >= REPEATER_BSSID_START && band_idx == 0)
-			mlink->bss_idx = 0;
-		else if (idx >= REPEATER_BSSID_START && band_idx == 1)
-			mlink->bss_idx = 1;
-		else if (idx >= REPEATER_BSSID_START && band_idx == 2)
-			mlink->bss_idx = 2;
-		else
-			mlink->bss_idx = mlink->idx + 3;
-
-		mlink->bss_idx += 1;
-	}
+	if (idx >= REPEATER_BSSID_START)
+		mlink->bss_idx = MT7996_MAX_LINKS_NONREPEATER + band_idx + 1;
 
 	ret = mt7996_mcu_add_dev_info(phy, vif, link_conf, mlink, true);
 	if (ret)
