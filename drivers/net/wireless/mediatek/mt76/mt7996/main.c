@@ -591,6 +591,7 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	int i, idx, ret;
 	u8 link_id = link_conf->link_id;
 	u64 vif_mask;
+	int this_word_bound;
 
 	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
 		 "%s:  vif_link_add called, link_id: %d.\n",
@@ -622,13 +623,26 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	for (i = 0; i < ARRAY_SIZE(dev->mt76.vif_mask); i++) {
 		vif_mask = dev->mt76.vif_mask[i];
 
+		/* All non-repeater link IDs are reserved in a block (MT7996_MAX_LINKS_NONREPEATER
+		 * bits long). After that block, repeater links are allocated.
+		 */
+		if (idx >= REPEATER_BSSID_START) {
+			if (i * 64 + 64 < MT7996_MAX_LINKS_NONREPEATER)
+				continue;
+
+			if (i * 64 < MT7996_MAX_LINKS_NONREPEATER) {
+				this_word_bound = MT7996_MAX_LINKS_NONREPEATER - i * 64 - 1;
+				vif_mask |= GENMASK_ULL(this_word_bound, 0);
+			}
+		}
+
 		if (vif_mask != ~0ull) {
 			mlink->idx = __ffs64(~vif_mask) + i * 64;
 			break;
 		}
 	}
 
-	if (mlink->idx >= mt7996_max_interface_num(dev) ||
+	if (mlink->idx >= (MT7996_MAX_LINKS_REPEATER + MT7996_MAX_LINKS_NONREPEATER) ||
 	    i >= ARRAY_SIZE(dev->mt76.vif_mask)) {
 		ret = -ENOSPC;
 		goto error;
