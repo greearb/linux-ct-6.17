@@ -318,7 +318,12 @@ static void ieee80211_set_vif_links_bitmaps(struct ieee80211_sub_if_data *sdata,
 		WARN_ON(dormant_links);
 		break;
 	case NL80211_IFTYPE_STATION:
-		if (sdata->vif.active_links)
+		/* MLMR requires more than one active link. Evidently, this is difficult for some
+		 * devices. The WANTS_VALID_LINKS flag corresponds with these two categories fairly
+		 * well, so check it to block a bad configuration for MLSR-only devices.
+		 */
+		if (sdata->vif.active_links &&
+		    !ieee80211_hw_check(&sdata->local->hw, WANTS_VALID_LINKS))
 			break;
 		sdata->vif.active_links = valid_links & ~dormant_links;
 		WARN_ON(hweight16(sdata->vif.active_links) > 1);
@@ -476,6 +481,9 @@ int ieee80211_vif_set_links(struct ieee80211_sub_if_data *sdata,
 {
 	struct link_container *links[IEEE80211_MLD_MAX_NUM_LINKS];
 	int ret;
+
+	sdata_info(sdata, "%s: new_links=0x%x; dormant_links=0x%x\n",
+		   __func__, new_links, dormant_links);
 
 	ret = ieee80211_vif_update_links(sdata, links, new_links,
 					 dormant_links);
