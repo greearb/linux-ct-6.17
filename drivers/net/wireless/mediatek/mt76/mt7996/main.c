@@ -518,19 +518,14 @@ mt7996_add_headless_vif(struct mt7996_phy *phy)
 	if (rcu_access_pointer(mvif->mt76.link[link_id]))
 		return 0;
 
-	if (dev->mt76.vif_mask[0] != 0xffffffffffffffff)
-		mlink->idx = __ffs64(~dev->mt76.vif_mask[0]);
-	else if (dev->mt76.vif_mask[1] != 0xffffffffffffffff)
-		mlink->idx = __ffs64(~dev->mt76.vif_mask[1]) + 64;
-	else
-		mlink->idx = __ffs64(~dev->mt76.vif_mask[2]) + 128;
-
-	if (mlink->idx >= mt7996_max_interface_num(dev)) {
-		ret = -ENOSPC;
-		goto error;
-	}
-
 	idx = MT7996_HEADLESS_LINK_IDX;
+
+	ret = mt7996_get_link_idx(dev, idx);
+
+	if (ret < 0)
+		goto error;
+
+	mlink->idx = ret;
 
 	link->phy = phy;
 	mlink->omac_idx = idx;
@@ -539,21 +534,13 @@ mt7996_add_headless_vif(struct mt7996_phy *phy)
 	mlink->wmm_idx = 0;
 	mlink->wcid = &msta_link->wcid;
 
-	mlink->bss_idx = mlink->idx + 3;
-	mlink->bss_idx += 1;
-
 	ret = mt7996_mcu_add_dev_info(phy, NULL /* unused */,
 				      link_conf /* needed for MAC addr */,
 				      mlink, true);
 	if (ret)
 		goto error;
 
-	if (mlink->idx > 127)
-		dev->mt76.vif_mask[2] |= BIT_ULL(mlink->idx - 128);
-	else if (mlink->idx > 63)
-		dev->mt76.vif_mask[1] |= BIT_ULL(mlink->idx - 64);
-	else
-		dev->mt76.vif_mask[0] |= BIT_ULL(mlink->idx);
+	dev->mt76.vif_mask[mlink->idx / 64] |= BIT_ULL(mlink->idx % 64);
 
 	idx = MT7996_WTBL_RESERVED - mlink->idx;
 
