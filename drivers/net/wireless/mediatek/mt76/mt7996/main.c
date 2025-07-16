@@ -184,6 +184,42 @@ static inline bool mt7996_has_hw_stations(struct mt7996_phy *phy)
 	return !!(phy->omac_mask & GENMASK_ULL(HW_BSSID_MAX, HW_BSSID_0));
 }
 
+static inline int mt7996_get_link_idx(struct mt7996_dev *dev, int omac_idx)
+{
+	int i, idx;
+	u64 vif_mask;
+	int this_word_bound;
+
+	for (i = 0; i < ARRAY_SIZE(dev->mt76.vif_mask); i++) {
+		vif_mask = dev->mt76.vif_mask[i];
+
+		/* All non-repeater link IDs are reserved in a block (MT7996_MAX_LINKS_NONREPEATER
+		 * bits long). After that block, repeater links are allocated.
+		 */
+		if (omac_idx >= REPEATER_BSSID_START) {
+			if (i * 64 + 64 < MT7996_MAX_LINKS_NONREPEATER)
+				continue;
+
+			if (i * 64 < MT7996_MAX_LINKS_NONREPEATER) {
+				this_word_bound = MT7996_MAX_LINKS_NONREPEATER - i * 64 - 1;
+				vif_mask |= GENMASK_ULL(this_word_bound, 0);
+			}
+		}
+
+		if (vif_mask == ~0ull)
+			continue;
+
+		idx = __ffs64(~vif_mask) + i * 64;
+
+		if (idx >= MT7996_MAX_LINKS)
+			return -ENOSPC;
+
+		return idx;
+	}
+
+	return -ENOSPC;
+}
+
 static inline int get_free_idx(u64 mask, u8 start, u8 end)
 {
 	if (~mask & GENMASK_ULL(end, start))
@@ -588,10 +624,8 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	struct mt7996_dev *dev = phy->dev;
 	u8 band_idx = phy->mt76->band_idx;
 	struct mt76_txq *mtxq;
-	int i, idx, ret;
+	int idx, ret;
 	u8 link_id = link_conf->link_id;
-	u64 vif_mask;
-	int this_word_bound;
 
 	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
 		 "%s:  vif_link_add called, link_id: %d.\n",
@@ -620,33 +654,12 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 		goto error;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(dev->mt76.vif_mask); i++) {
-		vif_mask = dev->mt76.vif_mask[i];
+	ret = mt7996_get_link_idx(dev, idx);
 
-		/* All non-repeater link IDs are reserved in a block (MT7996_MAX_LINKS_NONREPEATER
-		 * bits long). After that block, repeater links are allocated.
-		 */
-		if (idx >= REPEATER_BSSID_START) {
-			if (i * 64 + 64 < MT7996_MAX_LINKS_NONREPEATER)
-				continue;
-
-			if (i * 64 < MT7996_MAX_LINKS_NONREPEATER) {
-				this_word_bound = MT7996_MAX_LINKS_NONREPEATER - i * 64 - 1;
-				vif_mask |= GENMASK_ULL(this_word_bound, 0);
-			}
-		}
-
-		if (vif_mask != ~0ull) {
-			mlink->idx = __ffs64(~vif_mask) + i * 64;
-			break;
-		}
-	}
-
-	if (mlink->idx >= (MT7996_MAX_LINKS_REPEATER + MT7996_MAX_LINKS_NONREPEATER) ||
-	    i >= ARRAY_SIZE(dev->mt76.vif_mask)) {
-		ret = -ENOSPC;
+	if (ret < 0)
 		goto error;
-	}
+
+	mlink->idx = ret;
 
 	if (dev->sta_omac_repeater_bssid_enable) {
 		if (BIT_ULL(idx) & __GENMASK_ULL(REPEATER_BSSID_MAX, REPEATER_BSSID_START)) {
