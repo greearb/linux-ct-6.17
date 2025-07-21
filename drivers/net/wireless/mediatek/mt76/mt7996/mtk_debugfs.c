@@ -2123,13 +2123,13 @@ static void parse_fmac_uwtbl_sn(struct seq_file *s, u8 *uwtbl)
 
 static void dump_key_table(
 	struct seq_file *s,
+	struct mt7996_dev *dev,
 	uint16_t keyloc0,
 	uint16_t keyloc1,
 	uint16_t keyloc2
 )
 {
 #define ONE_KEY_ENTRY_LEN_IN_DW                8
-	struct mt7996_dev *dev = dev_get_drvdata(s->private);
 	u8 keytbl[ONE_KEY_ENTRY_LEN_IN_DW*4] = {0};
 	uint16_t x;
 
@@ -2199,7 +2199,8 @@ static void dump_key_table(
 	}
 }
 
-static void parse_fmac_uwtbl_key_info(struct seq_file *s, u8 *uwtbl, u8 *lwtbl)
+static void parse_fmac_uwtbl_key_info(struct seq_file *s, struct mt7996_dev *dev,
+				      u8 *uwtbl, u8 *lwtbl)
 {
 	u32 *addr = 0;
 	u32 dw_value = 0;
@@ -2228,7 +2229,7 @@ static void parse_fmac_uwtbl_key_info(struct seq_file *s, u8 *uwtbl, u8 *lwtbl)
 	}
 
 	/* Parse KEY link */
-	dump_key_table(s, keyloc0, keyloc1, keyloc2);
+	dump_key_table(s, dev, keyloc0, keyloc1, keyloc2);
 }
 
 static const struct berse_wtbl_parse WTBL_UMAC_DW8[] = {
@@ -2305,20 +2306,20 @@ static void parse_fmac_uwtbl_msdu_info(struct seq_file *s, u8 *uwtbl)
 		(dw_value & WTBL_AMSDU_NUM_MASK) >> WTBL_AMSDU_NUM_OFFSET);
 }
 
-static int mt7996_wtbl_read(struct seq_file *s, void *data)
+static void
+mt7996_wtbl_dump(struct seq_file *s, struct mt7996_dev *dev, u16 idx)
 {
-	struct mt7996_dev *dev = dev_get_drvdata(s->private);
 	u8 lwtbl[LWTBL_LEN_IN_DW * 4] = {0};
 	u8 uwtbl[UWTBL_LEN_IN_DW * 4] = {0};
 	int x;
 
-	mt7996_wtbl_read_raw(dev, dev->wlan_idx, WTBL_TYPE_LMAC, 0,
+	mt7996_wtbl_read_raw(dev, idx, WTBL_TYPE_LMAC, 0,
 				 LWTBL_LEN_IN_DW, lwtbl);
-	seq_printf(s, "Dump WTBL info of WLAN_IDX:%d\n", dev->wlan_idx);
+	seq_printf(s, "Dump WTBL info of WLAN_IDX:%d\n", idx);
 	seq_printf(s, "LMAC WTBL Addr: group:0x%x=0x%x addr: 0x%lx\n",
 		   MT_DBG_WTBLON_TOP_WDUCR_ADDR,
 		   mt76_rr(dev, MT_DBG_WTBLON_TOP_WDUCR_ADDR),
-		   LWTBL_IDX2BASE(dev->wlan_idx, 0));
+		   LWTBL_IDX2BASE(idx, 0));
 	for (x = 0; x < LWTBL_LEN_IN_DW; x++) {
 		seq_printf(s, "DW%02d: %02x %02x %02x %02x\n",
 			   x,
@@ -2348,13 +2349,13 @@ static int mt7996_wtbl_read(struct seq_file *s, void *data)
 	parse_fmac_lwtbl_dw32(s, lwtbl);
 	parse_fmac_lwtbl_rx_stats(s, lwtbl);
 
-	mt7996_wtbl_read_raw(dev, dev->wlan_idx, WTBL_TYPE_UMAC, 0,
+	mt7996_wtbl_read_raw(dev, idx, WTBL_TYPE_UMAC, 0,
 				 UWTBL_LEN_IN_DW, uwtbl);
-	seq_printf(s, "Dump WTBL info of WLAN_IDX:%d\n", dev->wlan_idx);
+	seq_printf(s, "Dump WTBL info of WLAN_IDX:%d\n", idx);
 	seq_printf(s, "UMAC WTBL Addr: group:0x%x=0x%x addr: 0x%lx\n",
 		   MT_DBG_UWTBL_TOP_WDUCR_ADDR,
 		   mt76_rr(dev, MT_DBG_UWTBL_TOP_WDUCR_ADDR),
-		   UWTBL_IDX2BASE(dev->wlan_idx, 0));
+		   UWTBL_IDX2BASE(idx, 0));
 	for (x = 0; x < UWTBL_LEN_IN_DW; x++) {
 		seq_printf(s, "DW%02d: %02x %02x %02x %02x\n",
 			   x,
@@ -2368,8 +2369,15 @@ static int mt7996_wtbl_read(struct seq_file *s, void *data)
 	parse_fmac_uwtbl_mlo_info(s, uwtbl);
 	parse_fmac_uwtbl_pn(s, uwtbl, lwtbl);
 	parse_fmac_uwtbl_sn(s, uwtbl);
-	parse_fmac_uwtbl_key_info(s, uwtbl, lwtbl);
+	parse_fmac_uwtbl_key_info(s, dev, uwtbl, lwtbl);
 	parse_fmac_uwtbl_msdu_info(s, uwtbl);
+}
+
+static int mt7996_wtbl_read(struct seq_file *s, void *data)
+{
+	struct mt7996_dev *dev = dev_get_drvdata(s->private);
+
+	mt7996_wtbl_dump(s, dev, dev->wlan_idx);
 
 	return 0;
 }
@@ -4240,6 +4248,39 @@ void mt7996_mtk_init_dev_debugfs(struct mt7996_dev *dev, struct dentry *dir)
 	/* Drop counters */
 	//debugfs_create_file("tx_drop_stats", 0400, dir, dev, &mt7996_tx_drop_fops);
 	//debugfs_create_file("rx_drop_stats", 0400, dir, dev, &mt7996_rx_drop_fops);
+}
+
+static int
+mt7996_link_wtbl_show(struct seq_file *file, void *data)
+{
+	struct ieee80211_bss_conf *conf = file->private;
+	struct mt7996_vif *mvif = (struct mt7996_vif *)conf->vif->drv_priv;
+	struct mt7996_sta *msta = &mvif->sta;
+	struct mt7996_dev *dev = mvif->dev;
+	struct mt7996_sta_link *msta_link;
+
+	mutex_lock(&dev->mt76.mutex);
+
+	msta_link = mt76_dereference(msta->link[conf->link_id], &dev->mt76);
+
+	/* Index 0 is reserved for control frames, and can be printed by the driver.
+	 * 0 here likely means uninitialized.
+	 */
+	if (!msta_link->wcid.idx)
+		goto out;
+
+	mt7996_wtbl_dump(file, dev, msta_link->wcid.idx);
+
+out:
+	mutex_unlock(&dev->mt76.mutex);
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(mt7996_link_wtbl);
+
+void mt7996_mtk_init_link_debugfs(struct ieee80211_bss_conf *link_conf, struct dentry *dir)
+{
+	debugfs_create_file("wtbl_info", 0600, dir, link_conf, &mt7996_link_wtbl_fops);
 }
 
 #endif

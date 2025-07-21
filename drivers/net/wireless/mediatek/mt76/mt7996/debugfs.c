@@ -2948,6 +2948,8 @@ void mt7996_link_add_debugfs(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			     struct ieee80211_bss_conf *link_conf, struct dentry *dir)
 {
 	debugfs_create_file("link_info", 0600, dir, link_conf, &mt7996_link_info_fops);
+
+	mt7996_mtk_init_link_debugfs(link_conf, dir);
 }
 
 #endif
