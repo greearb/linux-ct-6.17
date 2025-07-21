@@ -1397,6 +1397,7 @@ int mt7996_vendor_pp_bitmap_update(struct mt7996_phy *phy, u16 bitmap);
 #ifdef CONFIG_MTK_DEBUG
 void mt7996_mtk_init_dev_debugfs(struct mt7996_dev *dev, struct dentry *dir);
 void mt7996_mtk_init_band_debugfs(struct mt7996_phy *phy, struct dentry *dir);
+void mt7996_mtk_init_link_debugfs(struct ieee80211_bss_conf *link_conf, struct dentry *dir);
 int mt7996_mcu_set_sr_enable(struct mt7996_phy *phy, u8 action, u64 val, bool set);
 void mt7996_mcu_rx_sr_event(struct mt7996_dev *dev, struct sk_buff *skb);
 int mt7996_mcu_set_dup_wtbl(struct mt7996_dev *dev);
