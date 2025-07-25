@@ -870,6 +870,9 @@ struct mt7996_dev {
 			u8 min_tx_tpo;
 			u8 pst;
 		} lp;
+
+		bool enable_all_hw_omac;
+		bool enable_sta_ext_omac;
 	} dbg;
 
 	const struct mt7996_dbg_reg_desc *dbg_reg;
