@@ -29,6 +29,20 @@ MODULE_PARM_DESC(mt7996_repeater_sta,
 		 "Enable repeater stations\n"
 	);
 
+#ifdef CONFIG_MTK_DEBUG
+static bool mt7996_enable_all_hw_omac = 0;
+module_param(mt7996_enable_all_hw_omac, bool, 0644);
+MODULE_PARM_DESC(mt7996_enable_all_hw_omac,
+		 "Do not impose 8 link limit for HW OwnMAC links\n"
+	);
+
+static bool mt7996_enable_sta_ext_omac = 0;
+module_param(mt7996_enable_sta_ext_omac, bool, 0644);
+MODULE_PARM_DESC(mt7996_enable_sta_ext_omac,
+		 "Allow extend OwnMAC links to be used for station interfaces\n"
+	);
+#endif
+
 static int lp_ctrl = 0x3f;
 module_param(lp_ctrl, int, 0644);
 MODULE_PARM_DESC(lp_ctrl, "Low power control."
@@ -347,6 +361,20 @@ mt7996_configure_iface_combinations(struct mt7996_dev *dev)
 		if_comb_global.max_interfaces = MT7996_MAX_REPEATER_STA * MT7996_MAX_RADIOS;
 		if_limits[1].max = MT7996_MAX_REPEATER_STA;
 		if_comb.max_interfaces = MT7996_MAX_REPEATER_STA;
+
+		if (dev->dbg.enable_all_hw_omac) {
+			if_limits_global[1].max += 1;
+			if_comb_global.max_interfaces += 1;
+			if_limits[1].max += 1;
+			if_comb.max_interfaces += 1;
+		}
+
+		if (dev->dbg.enable_sta_ext_omac) {
+			if_limits_global[1].max += 15;
+			if_comb_global.max_interfaces += 15;
+			if_limits[1].max += 15;
+			if_comb.max_interfaces += 15;
+		}
 	}
 
 	for (int i = 0; i < wiphy->n_radio; i++) {
@@ -1793,6 +1821,10 @@ int mt7996_register_device(struct mt7996_dev *dev)
 	dev->mt76.phy.priv = &dev->phy;
 	dev->mt76.debug_lvl = debug_lvl;
 	dev->sta_omac_repeater_bssid_enable = mt7996_repeater_sta;
+#ifdef CONFIG_MTK_DEBUG
+	dev->dbg.enable_all_hw_omac = mt7996_enable_all_hw_omac;
+	dev->dbg.enable_sta_ext_omac = mt7996_enable_sta_ext_omac;
+#endif
 	INIT_WORK(&dev->rc_work, mt7996_mac_sta_rc_work);
 	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt7996_mac_work);
 	INIT_DELAYED_WORK(&dev->scs_work, mt7996_mcu_scs_sta_poll);

@@ -259,7 +259,7 @@ static int get_omac_idx(enum nl80211_iftype type, struct mt7996_phy *phy)
 		available_hw_omac_count -= !!(mask & BIT(HW_BSSID_0));
 
 		/* No need for this limit if repeater OMACs are not enabled */
-		if (!dev->sta_omac_repeater_bssid_enable)
+		if (!dev->sta_omac_repeater_bssid_enable || dev->dbg.enable_all_hw_omac)
 			available_hw_omac_count = HW_BSSID_3 - HW_BSSID_1 + 1;
 
 		/* Prefer hw bssid slot 1-3, however only 8 of these are available across
@@ -286,12 +286,16 @@ static int get_omac_idx(enum nl80211_iftype type, struct mt7996_phy *phy)
 		 * should not grab it for a vSTA, if possible.
 		 * Extend OMAC links do not currently work, but have in the past.
 		 */
-		// if (~mask & BIT(HW_BSSID_0))
-		// 	return HW_BSSID_0;
+		if (dev->dbg.enable_sta_ext_omac) {
+			i = get_free_idx(mask, EXT_BSSID_1, EXT_BSSID_MAX);
+			if (i)
+				return i - 1;
+		}
 
-		// i = get_free_idx(mask, EXT_BSSID_1, EXT_BSSID_MAX);
-		// if (i)
-		// 	return i - 1;
+		if (dev->dbg.enable_all_hw_omac) {
+			if (~mask & BIT(HW_BSSID_0))
+				return HW_BSSID_0;
+		}
 
 		break;
 	case NL80211_IFTYPE_MONITOR:
@@ -300,7 +304,8 @@ static int get_omac_idx(enum nl80211_iftype type, struct mt7996_phy *phy)
 		available_hw_omac_count -= hweight64(mask & GENMASK_ULL(HW_BSSID_3, HW_BSSID_1));
 
 		if (~mask & BIT(HW_BSSID_0) &&
-		    (available_hw_omac_count > 0 || !dev->sta_omac_repeater_bssid_enable))
+		    (available_hw_omac_count > 0 || !dev->sta_omac_repeater_bssid_enable ||
+		     dev->dbg.enable_all_hw_omac))
 			return HW_BSSID_0;
 
 		i = get_free_idx(mask, EXT_BSSID_1, EXT_BSSID_MAX);
