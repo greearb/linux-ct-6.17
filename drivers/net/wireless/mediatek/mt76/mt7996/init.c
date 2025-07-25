@@ -23,7 +23,7 @@ module_param(no_auto_vif, int, 0644);
 MODULE_PARM_DESC(no_auto_vif,
 		 "Do not automatically create wlanX on radio load.");
 
-bool mt7996_repeater_sta = 1;
+static bool mt7996_repeater_sta = 1;
 module_param(mt7996_repeater_sta, bool, 0644);
 MODULE_PARM_DESC(mt7996_repeater_sta,
 		 "Enable repeater stations\n"
