@@ -39,7 +39,7 @@ MODULE_PARM_DESC(lp_ctrl, "Low power control."
 			  "Bit4: Ultra Save."
 			  "Bit5: PST.");
 
-static const struct ieee80211_iface_limit if_limits_global[] = {
+static struct ieee80211_iface_limit if_limits_global[] = {
 	{
 		.max = 16 * MT7996_MAX_RADIOS,
 		.types = BIT(NL80211_IFTYPE_ADHOC)
@@ -54,7 +54,7 @@ static const struct ieee80211_iface_limit if_limits_global[] = {
 	}
 };
 
-static const struct ieee80211_iface_combination if_comb_global = {
+static struct ieee80211_iface_combination if_comb_global = {
 	.limits = if_limits_global,
 	.n_limits = ARRAY_SIZE(if_limits_global),
 	.max_interfaces = MT7996_MAX_INTERFACES * MT7996_MAX_RADIOS,
@@ -67,7 +67,7 @@ static const struct ieee80211_iface_combination if_comb_global = {
 	.beacon_int_min_gcd = 100,
 };
 
-static const struct ieee80211_iface_limit if_limits[] = {
+static struct ieee80211_iface_limit if_limits[] = {
 	{
 		.max = 16,
 		.types = BIT(NL80211_IFTYPE_AP)
@@ -80,64 +80,10 @@ static const struct ieee80211_iface_limit if_limits[] = {
 	}
 };
 
-static const struct ieee80211_iface_combination if_comb = {
+static struct ieee80211_iface_combination if_comb = {
 	.limits = if_limits,
 	.n_limits = ARRAY_SIZE(if_limits),
 	.max_interfaces = MT7996_MAX_INTERFACES,
-	.num_different_channels = 1,
-	.beacon_int_infra_match = true,
-	.radar_detect_widths = BIT(NL80211_CHAN_WIDTH_20_NOHT) |
-			       BIT(NL80211_CHAN_WIDTH_20) |
-			       BIT(NL80211_CHAN_WIDTH_40) |
-			       BIT(NL80211_CHAN_WIDTH_80) |
-			       BIT(NL80211_CHAN_WIDTH_160),
-	.beacon_int_min_gcd = 100,
-};
-
-static const struct ieee80211_iface_limit if_limits_repeater_global[] = {
-	{
-		.max = 16 * MT7996_MAX_RADIOS,
-		.types = BIT(NL80211_IFTYPE_AP)
-			 | BIT(NL80211_IFTYPE_ADHOC)
-#ifdef CONFIG_MAC80211_MESH
-			 | BIT(NL80211_IFTYPE_MESH_POINT)
-#endif
-	}, {
-		.max = MT7996_MAX_REPEATER_STA * MT7996_MAX_RADIOS,
-		.types = BIT(NL80211_IFTYPE_STATION)
-	}
-};
-
-static const struct ieee80211_iface_combination if_comb_repeater_global = {
-	.limits = if_limits_repeater_global,
-	.n_limits = ARRAY_SIZE(if_limits_repeater_global),
-	.max_interfaces = MT7996_MAX_INTERFACES_REPEATER * MT7996_MAX_RADIOS,
-	.num_different_channels = MT7996_MAX_RADIOS,
-	.radar_detect_widths = BIT(NL80211_CHAN_WIDTH_20_NOHT) |
-			       BIT(NL80211_CHAN_WIDTH_20) |
-			       BIT(NL80211_CHAN_WIDTH_40) |
-			       BIT(NL80211_CHAN_WIDTH_80) |
-			       BIT(NL80211_CHAN_WIDTH_160),
-	.beacon_int_min_gcd = 100,
-};
-
-static const struct ieee80211_iface_limit if_limits_repeater[] = {
-	{
-		.max = 16,
-		.types = BIT(NL80211_IFTYPE_AP)
-#ifdef CONFIG_MAC80211_MESH
-			 | BIT(NL80211_IFTYPE_MESH_POINT)
-#endif
-	}, {
-		.max = MT7996_MAX_REPEATER_STA,
-		.types = BIT(NL80211_IFTYPE_STATION)
-	}
-};
-
-static const struct ieee80211_iface_combination if_comb_repeater = {
-	.limits = if_limits_repeater,
-	.n_limits = ARRAY_SIZE(if_limits_repeater),
-	.max_interfaces = MT7996_MAX_INTERFACES_REPEATER,
 	.num_different_channels = 1,
 	.beacon_int_infra_match = true,
 	.radar_detect_widths = BIT(NL80211_CHAN_WIDTH_20_NOHT) |
@@ -396,23 +342,25 @@ mt7996_configure_iface_combinations(struct mt7996_dev *dev)
 	struct wiphy *wiphy = hw->wiphy;
 	struct wiphy_radio *radio;
 
+	if (dev->sta_omac_repeater_bssid_enable && is_mt7996(&dev->mt76)) {
+		if_limits_global[1].max = MT7996_MAX_REPEATER_STA * MT7996_MAX_RADIOS;
+		if_comb_global.max_interfaces = MT7996_MAX_REPEATER_STA * MT7996_MAX_RADIOS;
+		if_limits[1].max = MT7996_MAX_REPEATER_STA;
+		if_comb.max_interfaces = MT7996_MAX_REPEATER_STA;
+	}
+
 	for (int i = 0; i < wiphy->n_radio; i++) {
 		radio = &dev->radios[i];
 
 		if (!is_mt7996(&dev->mt76))
 			radio->iface_combinations = &if_comb_7992;
-		else if (dev->sta_omac_repeater_bssid_enable)
-			radio->iface_combinations = &if_comb_repeater;
 		else
 			radio->iface_combinations = &if_comb;
 
 		radio->n_iface_combinations = 1;
 	}
 
-	if (dev->sta_omac_repeater_bssid_enable)
-		wiphy->iface_combinations = &if_comb_repeater_global;
-	else
-		wiphy->iface_combinations = &if_comb_global;
+	wiphy->iface_combinations = &if_comb_global;
 
 	wiphy->n_iface_combinations = 1;
 }
