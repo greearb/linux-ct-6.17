@@ -2710,7 +2710,7 @@ mt7996_vif_links_info_show(struct seq_file *s, void *data)
 		seq_printf(s, "            omac_idx = %d, own_mld_id=%d\n",
 			   mconf->mt76.omac_idx, mconf->own_mld_id);
 
-		if (!mconf->phy->mt76->chanctx)
+		if (!mconf->phy->mt76->chanctx || !mconf->mt76.ctx)
 			continue;
 
 		seq_printf(s, "            band_idx=%d, radio_idx=%d, channel=%d, bw%s\n",
