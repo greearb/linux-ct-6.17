@@ -1045,6 +1045,9 @@ int mt7996_set_channel(struct mt76_phy *mphy)
 	struct mt7996_phy *phy = mphy->priv;
 	int ret = 0;
 
+	if (mphy->offchannel)
+		mt7996_mac_update_beacons(phy);
+
 	if (mphy->chanctx && mphy->chanctx->state == MT76_CHANCTX_STATE_ADD) {
 		if (!mt76_testmode_enabled(phy->mt76) /* && !phy->mt76->test.bf_en*/) {
 			ret = mt7996_mcu_edcca_enable(phy, true);
@@ -1110,6 +1113,8 @@ int mt7996_set_channel(struct mt76_phy *mphy)
 
 	mt7996_mac_reset_counters(phy);
 	phy->noise = 0;
+	if (!mphy->offchannel)
+		mt7996_mac_update_beacons(phy);
 
 out:
 	ieee80211_queue_delayed_work(mphy->hw, &mphy->mac_work,
