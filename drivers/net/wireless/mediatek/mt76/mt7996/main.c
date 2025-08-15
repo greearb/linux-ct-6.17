@@ -1682,12 +1682,18 @@ error:
 
 static void
 mt7996_mac_sta_deinit_link(struct mt7996_dev *dev,
-			   struct mt7996_sta_link *msta_link)
+			   struct ieee80211_sta *sta,
+			   struct mt7996_sta_link *msta_link,
+			   bool last_link)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(msta_link->wcid.aggr); i++)
-		mt76_rx_aggr_stop(&dev->mt76, &msta_link->wcid, i);
+	for (i = 0; i < ARRAY_SIZE(msta_link->wcid.aggr); i++) {
+		if (sta->mlo && !last_link)
+			rcu_assign_pointer(msta_link->wcid.aggr[i], NULL);
+		else
+			mt76_rx_aggr_stop(&dev->mt76, &msta_link->wcid, i);
+	}
 
 	mt7996_mac_wtbl_update(dev, msta_link->wcid.idx,
 			       MT_WTBL_UPDATE_ADM_COUNT_CLEAR);
@@ -1722,7 +1728,7 @@ mt7996_mac_sta_remove_links(struct mt7996_dev *dev, struct ieee80211_vif *vif,
 		if (!msta_link)
 			continue;
 
-		mt7996_mac_sta_deinit_link(dev, msta_link);
+		mt7996_mac_sta_deinit_link(dev, sta, msta_link, msta->valid_links == BIT(link_id));
 		link = mt7996_vif_link(dev, vif, link_id);
 		if (!link)
 			continue;
@@ -2126,10 +2132,13 @@ mt7996_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	struct mt7996_sta *msta = (struct mt7996_sta *)sta->drv_priv;
 	struct ieee80211_txq *txq = sta->txq[params->tid];
 	struct ieee80211_link_sta *link_sta;
+	struct mt76_rx_tid *rx_tid = NULL;
 	u16 tid = params->tid;
 	u16 ssn = params->ssn;
 	struct mt76_txq *mtxq;
+	unsigned long valid_links = msta->valid_links ?: BIT(0);
 	unsigned int link_id;
+	int valid_link_cnt = hweight16((u16)valid_links);
 	int ret = 0;
 
 	if (!txq)
@@ -2143,6 +2152,7 @@ mt7996_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		struct mt7996_sta_link *msta_link;
 		struct mt7996_vif_link *link;
 
+		valid_link_cnt--;
 		msta_link = mt76_dereference(msta->link[link_id], &dev->mt76);
 		if (!msta_link)
 			continue;
@@ -2153,15 +2163,26 @@ mt7996_ampdu_action(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 
 		switch (action) {
 		case IEEE80211_AMPDU_RX_START:
-			mt76_rx_aggr_start(&dev->mt76, &msta_link->wcid, tid,
-					   ssn, params->buf_size);
-			ret = mt7996_mcu_add_rx_ba(dev, params, link, msta_link, true);
+			if (!rx_tid) {
+				mt76_rx_aggr_start(&dev->mt76, &msta_link->wcid, tid,
+						   ssn, params->buf_size);
+				rx_tid = rcu_access_pointer(msta_link->wcid.aggr[tid]);
+			} else
+				rcu_assign_pointer(msta_link->wcid.aggr[tid], rx_tid);
+
+			ret = mt7996_mcu_add_rx_ba(dev, params, link,
+						   msta_link, true);
 			mtk_dbg(&dev->mt76, BA, "ampdu-action, RX_START, tid: %d ssn: %d ret: %d\n",
 				tid, ssn, ret);
 			break;
 		case IEEE80211_AMPDU_RX_STOP:
-			mt76_rx_aggr_stop(&dev->mt76, &msta_link->wcid, tid);
-			ret = mt7996_mcu_add_rx_ba(dev, params, link, msta_link, false);
+			if (sta->mlo && valid_link_cnt > 0)
+				rcu_assign_pointer(msta_link->wcid.aggr[tid], NULL);
+			else
+				mt76_rx_aggr_stop(&dev->mt76, &msta_link->wcid, tid);
+
+			ret = mt7996_mcu_add_rx_ba(dev, params, link,
+						   msta_link, false);
 			mtk_dbg(&dev->mt76, BA, "ampdu-action, RX_STOP, tid: %d ssn: %d ret: %d\n",
 				tid, ssn, ret);
 			break;
