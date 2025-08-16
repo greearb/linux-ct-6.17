@@ -1384,7 +1384,7 @@ void mt76_inc_ampdu_bucket(int ampdu_len, struct mt76_sta_stats *stats)
 
 struct mt76_ethtool_worker_info {
 	u64 *data;
-	int idx;
+	int indices[IEEE80211_MLD_MAX_NUM_LINKS];
 	int initial_stat_idx;
 	int worker_stat_count;
 	int sta_count;
