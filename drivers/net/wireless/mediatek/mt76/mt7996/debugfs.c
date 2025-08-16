@@ -2874,7 +2874,7 @@ mt7996_link_sta_info_show(struct seq_file *file, void *data)
 	mt7996_parse_rate(&wcid->rx_rate, buf, sizeof(buf));
 	seq_printf(file, "\tRX: %s\n", buf);
 
-	seq_printf(file, "Statistics:\n");
+	seq_printf(file, "Statistics (stats address: %p):\n", stats);
 	seq_printf(file, "\tTX:\n");
 	seq_printf(file, "\t\tByte Count: %llu\n", stats->tx_bytes);
 	for (ac = IEEE80211_AC_VO; ac < IEEE80211_NUM_ACS; ++ac)
@@ -2898,6 +2898,18 @@ mt7996_link_sta_info_show(struct seq_file *file, void *data)
 		   stats->rx_mpdus ? stats->rx_fcs_err * 1000 / stats->rx_mpdus / 10 : 0,
 		   stats->rx_mpdus ? stats->rx_fcs_err * 1000 / stats->rx_mpdus % 10 : 0);
 	seq_printf(file, "\t\tAirtime: %llu (unit: 1.024 us)\n", stats->rx_airtime);
+
+	seq_printf(file, "\tRx-Bw-20:  %lu\n", stats->rx_bw_20);
+	seq_printf(file, "\tRx-Bw-40:  %lu\n", stats->rx_bw_40);
+	seq_printf(file, "\tRx-Bw-80:  %lu\n", stats->rx_bw_80);
+	seq_printf(file, "\tRx-Bw-160: %lu\n", stats->rx_bw_160);
+	seq_printf(file, "\tRx-Bw-320: %lu\n", stats->rx_bw_320);
+
+	seq_printf(file, "\n\tTx-Bw-20:  %llu\n", stats->tx_bw[0]);
+	seq_printf(file, "\tTx-Bw-40:  %llu\n", stats->tx_bw[1]);
+	seq_printf(file, "\tTx-Bw-80:  %llu\n", stats->tx_bw[2]);
+	seq_printf(file, "\tTx-Bw-160: %llu\n", stats->tx_bw[3]);
+	seq_printf(file, "\tTx-Bw-320: %llu\n", stats->tx_bw[4]);
 
 	mutex_unlock(&msta->vif->dev->mt76.mutex);
 
