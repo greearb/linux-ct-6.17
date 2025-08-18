@@ -49,29 +49,29 @@ static int mt7996_agginfo_show(struct seq_file *s, void *data)
 	seq_printf(s, "Band %d AGG Status\n", band_idx);
 	seq_printf(s, "===============================\n");
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR0_ADDR + band_offset);
-	seq_printf(s, "AC00 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR0_AC00_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR0_AC00_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC01 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR0_AC01_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR0_AC01_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC00 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR0_AC00_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR0_AC00_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC01 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR0_AC01_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR0_AC01_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR1_ADDR + band_offset);
-	seq_printf(s, "AC02 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR1_AC02_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR1_AC02_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC03 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR1_AC03_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR1_AC03_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC02 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR1_AC02_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR1_AC02_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC03 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR1_AC03_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR1_AC03_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR2_ADDR + band_offset);
-	seq_printf(s, "AC10 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR2_AC10_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR2_AC10_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC11 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR2_AC11_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR2_AC11_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC10 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR2_AC10_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR2_AC10_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC11 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR2_AC11_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR2_AC11_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR3_ADDR + band_offset);
-	seq_printf(s, "AC12 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR3_AC12_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR3_AC12_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC13 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR3_AC13_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR3_AC13_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC12 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR3_AC12_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR3_AC12_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC13 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR3_AC13_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR3_AC13_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR4_ADDR + band_offset);
-	seq_printf(s, "AC20 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR4_AC20_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR4_AC20_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC21 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR4_AC21_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR4_AC21_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC20 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR4_AC20_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR4_AC20_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC21 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR4_AC21_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR4_AC21_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR5_ADDR + band_offset);
-	seq_printf(s, "AC22 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR5_AC22_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR5_AC22_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC23 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR5_AC23_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR5_AC23_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC22 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR5_AC22_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR5_AC22_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC23 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR5_AC23_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR5_AC23_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR6_ADDR + band_offset);
-	seq_printf(s, "AC30 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR6_AC30_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR6_AC30_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC31 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR6_AC31_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR6_AC31_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC30 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR6_AC30_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR6_AC30_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC31 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR6_AC31_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR6_AC31_AGG_LIMIT_SHFT);
 	value = mt76_rr(dev, BN0_WF_AGG_TOP_AALCR7_ADDR + band_offset);
-	seq_printf(s, "AC32 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR7_AC32_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR7_AC32_AGG_LIMIT_SHFT);
-	seq_printf(s, "AC33 Agg limit = %d\t", (value & BN0_WF_AGG_TOP_AALCR7_AC33_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR7_AC33_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC32 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR7_AC32_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR7_AC32_AGG_LIMIT_SHFT);
+	seq_printf(s, "AC33 Agg limit = %d\n", (value & BN0_WF_AGG_TOP_AALCR7_AC33_AGG_LIMIT_MASK) >>  BN0_WF_AGG_TOP_AALCR7_AC33_AGG_LIMIT_SHFT);
 
 	switch (band_idx) {
 	case 0:
