@@ -31,6 +31,7 @@ static int mt7996_agginfo_show(struct seq_file *s, void *data)
 	u32 value, idx, row_idx, col_idx, start_range, agg_rang_sel[16], burst_cnt[16], band_offset = 0;
 	u8 partial_str[16] = {}, full_str[64] = {};
 	u8 band_idx = phy->mt76->band_idx;
+	int i;
 
 	switch (band_idx) {
 	case 0:
@@ -130,6 +131,16 @@ static int mt7996_agginfo_show(struct seq_file *s, void *data)
 	burst_cnt[14] = mt76_rr(dev, BN0_WF_MIB_TOP_TRDR14_ADDR + band_offset);
 	burst_cnt[15] = mt76_rr(dev, BN0_WF_MIB_TOP_TRDR15_ADDR + band_offset);
 
+	/* See mac_update_stats, do this in loop, and aggregate values instead
+	 * of open-coding and not aggregating the values (which are clear on read)
+	 */
+	for (i = 0; i < 16; i++) {
+		/* Accumulate our persistent stats */
+		phy->mt76->aggr_stats[i] += burst_cnt[i];
+		/* Use aggregate when reporting below. */
+		burst_cnt[i] = phy->mt76->aggr_stats[i];
+	}
+
 	start_range = 1;
 	total_burst = 0;
 	total_ampdu = 0;
@@ -168,7 +179,7 @@ static int mt7996_agginfo_show(struct seq_file *s, void *data)
 		idx = 4 * row_idx;
 
 		seq_printf(s, "%s\n", full_str);
-		seq_printf(s, "%13s 0x%-9x 0x%-9x 0x%-9x 0x%-9x\n",
+		seq_printf(s, "%13s   %-9d   %-9d   %-9d   %-9d\n",
 			row_idx ? "" : "Burst count:",
 			burst_cnt[idx], burst_cnt[idx + 1],
 			burst_cnt[idx + 2], burst_cnt[idx + 3]);
