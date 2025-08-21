@@ -1010,6 +1010,8 @@ static void mt7996_remove_interface(struct ieee80211_hw *hw,
 	struct mt7996_phy *phy = &dev->phy;
 	struct mt7996_radio_data rdata = {};
 	int i;
+	unsigned int link_id;
+	unsigned long valid_links = vif->valid_links ?: BIT(0);
 
 	ieee80211_iterate_active_interfaces_mtx(hw, 0, mt7996_remove_iter,
 						&rdata);
@@ -1018,14 +1020,28 @@ static void mt7996_remove_interface(struct ieee80211_hw *hw,
 
 	mutex_lock(&dev->mt76.mutex);
 
-	conf = link_conf_dereference_protected(vif, 0);
-	mconf = mt7996_vif_link(dev, vif, 0);
-	if (!mconf || !conf)
-		goto out;
+	mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: Removing links: 0x%lx\n", __func__, valid_links);
 
-	mt7996_vif_link_remove(mconf->phy->mt76, vif, conf, &mconf->mt76);
+	for_each_set_bit(link_id, &valid_links, IEEE80211_MLD_MAX_NUM_LINKS) {
+		conf = link_conf_dereference_protected(vif, link_id);
 
-out:
+		/* This seems to not always be configured (perhaps in incorrectly configured VIFs?)
+		 * Still, we need to somehow clean up the WCID that was allocated, so fall back to
+		 * something that we know exists and hope for the best.
+		 */
+		if (!conf)
+			conf = &vif->bss_conf;
+
+		mconf = mt7996_vif_link(dev, vif, link_id);
+
+		if (!mconf)
+			continue;
+
+		mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: Removing links %d\n", __func__, link_id);
+
+		mt7996_vif_link_remove(mconf->phy->mt76, vif, conf, &mconf->mt76);
+	}
+
 	mutex_unlock(&dev->mt76.mutex);
 
 	for (i = 0; i < MT7996_MAX_RADIOS; i++) {
