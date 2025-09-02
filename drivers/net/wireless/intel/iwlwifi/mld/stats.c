@@ -321,6 +321,7 @@ void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *link;
+	int q = 0;
 
 	/* Grab chain signal avg, mac80211 cannot do it because
 	 * this driver uses RSS.  Grab signal_avg here too because firmware
@@ -340,10 +341,15 @@ void iwl_mld_mac80211_sta_statistics(struct ieee80211_hw *hw,
 	sinfo->chain_signal_avg[0] = -ewma_signal_read(&mld_sta->rx_avg_chain_signal[0]);
 	sinfo->chain_signal_avg[1] = -ewma_signal_read(&mld_sta->rx_avg_chain_signal[1]);
 
+	/* NOTE:  This is effectively only the active links */
 	for_each_mld_vif_valid_link(mld_vif, link) {
 		struct station_info_link *ilink;
 
-		ilink = &sinfo->link_info[link_id];
+		if (q >= IEEE80211_MAX_STA_INFO_LINK)
+			break;
+
+		ilink = &sinfo->link_info[q++];
+		ilink->link_id = link->link_id;
 
 		ilink->filled |= BIT_ULL(NL80211_STA_INFO_BEACON_SIGNAL_AVG);
 		ilink->rx_beacon_signal_avg =
