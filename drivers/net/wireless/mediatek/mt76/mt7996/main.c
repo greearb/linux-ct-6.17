@@ -2495,7 +2495,7 @@ static void mt7996_sta_statistics(struct ieee80211_hw *hw,
 		msta_link = mt76_dereference(msta->link[msta->deflink_id], &dev->mt76);
 	} else {
 		/* Find highest link, report that as sinfo defaults */
-		for (i = 2; i>=0; i--) {
+		for (i = IEEE80211_MLD_MAX_NUM_LINKS - 1; i >= 0; i--) {
 			msta_link = mt76_dereference(msta->link[i], &dev->mt76);
 			if (msta_link)
 				break;
@@ -2556,10 +2556,15 @@ static void mt7996_sta_statistics(struct ieee80211_hw *hw,
 	}
 
 	if (ieee80211_vif_is_mld(vif)) {
-		for (i = 0; i<3; i++) {
+		int q = 0;
+
+		for (i = 0; i<IEEE80211_MLD_MAX_NUM_LINKS; i++) {
 			struct station_info_link *ilink;
 			struct mt76_sta_stats *stats;
 			struct mt76_wcid *wcid;
+
+			if (q >= IEEE80211_MAX_STA_INFO_LINK)
+				break;
 
 			msta_link = mt76_dereference(msta->link[i], &dev->mt76);
 			if (!msta_link)
@@ -2567,7 +2572,8 @@ static void mt7996_sta_statistics(struct ieee80211_hw *hw,
 			wcid = &msta_link->wcid;
 			stats = &wcid->stats;
 
-			ilink = &sinfo->link_info[i];
+			ilink = &sinfo->link_info[q++];
+			ilink->link_id = i;
 
 			txrate = &msta_link->wcid.rate;
 

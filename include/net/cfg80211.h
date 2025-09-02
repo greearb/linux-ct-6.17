@@ -2056,7 +2056,7 @@ struct cfg80211_tid_stats {
 	struct cfg80211_txq_stats txq_stats;
 };
 
-#define IEEE80211_MAX_STA_INFO_LINK 3
+#define IEEE80211_MAX_STA_INFO_LINK 4
 /**
  * struct station_info_link -- Link info
  *
@@ -2076,6 +2076,7 @@ struct station_info_link {
 	s8 rx_beacon_signal_avg;
 	s8 ack_signal;
 	s8 avg_ack_signal;
+	u8 link_id;
 };
 
 #define IEEE80211_MAX_CHAINS	4
