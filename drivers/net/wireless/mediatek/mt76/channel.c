@@ -142,8 +142,11 @@ int mt76_assign_vif_chanctx(struct ieee80211_hw *hw,
 		goto out;
 
 	mlink = mt76_vif_link(dev, vif, link_id);
-	/* Remove bss conf when change non-MLO interface to MLO interface */
-	if (ieee80211_vif_is_mld(vif) && mlink == (struct mt76_vif_link *)vif->drv_priv)
+	/* Remove bss conf when change non-MLO interface to MLO interface
+	 * or when non-MLD, remove bss conf when changing phy bands
+	 */
+	if ((ieee80211_vif_is_mld(vif) && mlink == (struct mt76_vif_link *)vif->drv_priv) ||
+	    (!ieee80211_vif_is_mld(vif) && mlink && mlink->band_idx != phy->band_idx))
 		dev->drv->vif_link_remove(phy, vif, NULL, mlink);
 
 	ret = dev->drv->vif_link_add(phy, vif, link_conf, NULL);
