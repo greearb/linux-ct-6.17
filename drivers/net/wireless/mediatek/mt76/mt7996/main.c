@@ -1159,6 +1159,11 @@ mt7996_mac_sta_init_link(struct mt7996_dev *dev,
 			return -ENOMEM;
 	}
 
+	mt76_dbg(&dev->mt76, MT76_DBG_STA,
+			 "%s: STA %pM, wcid=%u, link_id=%u (%pM), pri_link=%u, sec_link=%u\n",
+			 __func__, sta->addr, msta_link->wcid.idx, link_id,
+			 link_sta->addr, msta->deflink_id, msta->sec_link);
+
 	INIT_LIST_HEAD(&msta_link->rc_list);
 	INIT_LIST_HEAD(&msta_link->wcid.poll_list);
 	msta_link->sta = msta;
@@ -1183,6 +1188,10 @@ mt7996_mac_sta_init_link(struct mt7996_dev *dev,
 
 	rcu_assign_pointer(dev->mt76.wcid[idx], &msta_link->wcid);
 	mt76_wcid_init(&msta_link->wcid, phy->mt76->band_idx);
+
+#ifdef CONFIG_MTK_VENDOR
+	mt7996_vendor_amnt_sta_remove(link->phy, sta);
+#endif
 
 error:
 	return ret;
@@ -1219,6 +1228,7 @@ mt7996_mac_sta_remove_links(struct mt7996_dev *dev, struct ieee80211_vif *vif,
 	struct mt76_dev *mdev = &dev->mt76;
 	unsigned int link_id;
 
+	mt76_dbg(&dev->mt76, MT76_DBG_STA, "%s: removed_links=0x%lx\n", __func__, links);
 	for_each_set_bit(link_id, &links, IEEE80211_MLD_MAX_NUM_LINKS) {
 		struct mt7996_sta_link *msta_link = NULL;
 		struct mt7996_vif_link *link;
@@ -1256,6 +1266,8 @@ mt7996_mac_sta_add_links(struct mt7996_dev *dev, struct ieee80211_vif *vif,
 	unsigned int link_id;
 	int err = 0;
 
+	mt76_dbg(&dev->mt76, MT76_DBG_STA,
+		 "%s: added_links=0x%lx\n", __func__, new_links);
 	for_each_set_bit(link_id, &new_links, IEEE80211_MLD_MAX_NUM_LINKS) {
 		struct ieee80211_bss_conf *link_conf;
 		struct ieee80211_link_sta *link_sta;
@@ -1314,6 +1326,8 @@ mt7996_mac_sta_change_links(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	unsigned long rem = old_links & ~new_links;
 	int ret;
 
+	mt76_dbg(&dev->mt76, MT76_DBG_STA, "%s: STA %pM old=0x%x, new=0x%x\n",
+		 __func__, sta->addr, old_links, new_links);
 	mutex_lock(&dev->mt76.mutex);
 
 	mt7996_mac_sta_remove_links(dev, vif, sta, rem);
