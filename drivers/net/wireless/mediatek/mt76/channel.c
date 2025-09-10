@@ -45,6 +45,8 @@ int mt76_add_chanctx(struct ieee80211_hw *hw,
 		mt76_abort_scan(dev);
 
 	mutex_lock(&dev->mutex);
+
+	ctx->state = MT76_CHANCTX_STATE_ADD;
 	if (!phy->chanctx)
 		ret = mt76_phy_update_channel(phy, conf);
 	else
@@ -91,6 +93,7 @@ void mt76_change_chanctx(struct ieee80211_hw *hw,
 	cancel_delayed_work_sync(&phy->mac_work);
 
 	mutex_lock(&dev->mutex);
+	ctx->state = MT76_CHANCTX_STATE_CHANGE;
 	mt76_phy_update_channel(phy, conf);
 	mutex_unlock(&dev->mutex);
 }
@@ -211,6 +214,7 @@ int mt76_switch_vif_chanctx(struct ieee80211_hw *hw,
 
 	update_chan = phy->chanctx != new_ctx;
 	if (update_chan) {
+		new_ctx->state = MT76_CHANCTX_STATE_SWITCH;
 		if (dev->scan.phy == phy)
 			mt76_abort_scan(dev);
 
