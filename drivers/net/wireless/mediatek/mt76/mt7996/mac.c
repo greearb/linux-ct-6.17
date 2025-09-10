@@ -97,6 +97,33 @@ static struct mt76_wcid *mt7996_rx_get_wcid(struct mt7996_dev *dev,
 	return &msta_link->wcid;
 }
 
+static struct mt76_wcid *mt7996_get_active_link_wcid(struct mt7996_dev *dev,
+						     struct mt76_wcid *old_wcid)
+{
+	struct mt7996_sta_link *old_msta_link = container_of(old_wcid, struct mt7996_sta_link, wcid);
+	struct mt7996_sta_link *msta_link = NULL;
+	struct mt7996_sta *msta = old_msta_link->sta;
+	int i;
+
+	if (old_wcid->link_id != msta->deflink_id)
+		msta_link = rcu_dereference(msta->link[msta->deflink_id]);
+	else if (old_wcid->link_id != msta->sec_link)
+		msta_link = rcu_dereference(msta->link[msta->sec_link]);
+
+	if (msta_link)
+		return &msta_link->wcid;
+
+	for (i = MT_BAND0; i <= MT_BAND2; i++) {
+		struct mt76_wcid *tmp =
+			mt7996_rx_get_wcid(dev, old_wcid->idx, i);
+
+		if (tmp && !tmp->sta_disabled)
+			return tmp;
+	}
+
+	return old_wcid;
+}
+
 bool mt7996_mac_wtbl_update(struct mt7996_dev *dev, int idx, u32 mask)
 {
 	mt76_rmw(dev, MT_WTBL_UPDATE, MT_WTBL_UPDATE_WLAN_IDX,
@@ -509,6 +536,10 @@ mt7996_mac_fill_rx(struct mt7996_dev *dev, enum mt76_rxq_id q,
 		stats = &status->wcid->stats;
 		msta = msta_link->sta;
 		mt76_wcid_add_poll(&dev->mt76, &msta_link->wcid);
+
+		if (status->wcid->sta_disabled)
+			status->wcid = mt7996_get_active_link_wcid(dev,
+								   status->wcid);
 	}
 
 	status->freq = mphy->chandef.chan->center_freq;
