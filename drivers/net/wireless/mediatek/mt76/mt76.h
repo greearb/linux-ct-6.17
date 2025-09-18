@@ -750,6 +750,14 @@ struct mt76_mmio {
 	struct completion wed_reset_complete;
 };
 
+/* Timestamp is shared by A-MSDU, but not A-MPDU. However, A-MPDUs are
+ * transmitted very near each other, and have a gap while waiting for a
+ * block-ack. 200 us seems to be a sweet spot where slower rates (legacy)  are
+ * still under the threshold (roughly 180 us per frame), and faster  rates (AX)
+ * have gaps just above the threshold (roughly 300 us).
+ */
+#define MT76_TSF_MPDU_DUR_THRESHOLD 200
+
 struct mt76_rx_status {
 	union {
 		struct mt76_wcid *wcid;
