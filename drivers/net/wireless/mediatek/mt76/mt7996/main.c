@@ -222,9 +222,11 @@ static int get_omac_idx(enum nl80211_iftype type, struct mt7996_phy *phy)
 		if (i)
 			return i - 1;
 
+#ifdef CONFIG_MT7996E_EXT_BSSID_STAS
 		i = get_free_idx(mask, EXT_BSSID_1, EXT_BSSID_MAX);
 		if (i)
 			return i - 1;
+#endif
 
 		break;
 	case NL80211_IFTYPE_MONITOR:
