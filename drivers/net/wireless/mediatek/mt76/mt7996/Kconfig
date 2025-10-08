@@ -12,3 +12,13 @@ config MT7996E
 	  and 2.4GHz IEEE 802.11be 4x4:4SS 4096-QAM, 320MHz channels.
 
 	  To compile this driver as a module, choose M here.
+
+config MT7996E_EXT_BSSID_STAS
+	bool "Enable EXT_BSSID stations for mt7996 driver"
+	default n
+	depends on MT7996E
+	help
+	  Since the combined-phy rework of the driver, station links
+	  allocated with these MUAR indices have not worked. Without
+	  this enabled, these links will be disabled, and the interface
+	  configurations will be updated accordingly.
