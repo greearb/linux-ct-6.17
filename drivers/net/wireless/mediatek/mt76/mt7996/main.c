@@ -171,16 +171,41 @@ static inline int get_free_idx(u64 mask, u8 start, u8 end)
 	return 0;
 }
 
-static int get_omac_idx(enum nl80211_iftype type, u64 mask)
+static int get_omac_idx(enum nl80211_iftype type, struct mt7996_phy *phy)
 {
+	struct mt7996_dev *dev = phy->dev;
+	u64 hw_omac_mask, mask = phy->omac_mask;
+	int this_phy_available_hw_links = MT7996_HW_OMAC_LIMIT;
+	u8 upper_hw_omac_limit;
 	int i;
+
+	for (i = 0; i < MT7996_MAX_RADIOS; i++) {
+		if (!dev->radio_phy[i] || dev->radio_phy[i] == phy)
+			continue;
+
+		/* Must reserve one HW_BSSID on each band for repeater STA use. */
+		hw_omac_mask = ~BIT_ULL(MT7996_MASTER_OMAC_IDX) &
+					GENMASK_ULL(HW_BSSID_MAX, HW_BSSID_0) &
+					dev->radio_phy[i]->omac_mask;
+
+		this_phy_available_hw_links -= hweight64(hw_omac_mask) + 1;
+	}
 
 	switch (type) {
 	case NL80211_IFTYPE_MESH_POINT:
 	case NL80211_IFTYPE_ADHOC:
 	case NL80211_IFTYPE_STATION:
+		/* Count the out-of-reach HW_BSSID_0, which is only used for APs */
+		this_phy_available_hw_links -= !!(mask & BIT(HW_BSSID_0));
+
+		/* Prefer hw bssid slot 1-3, however only 8 of these are available across
+		 * all 3 bands.
+		 */
+		upper_hw_omac_limit = min(HW_BSSID_1 + this_phy_available_hw_links - 1,
+					  HW_BSSID_3);
+
 		/* prefer hw bssid slot 1-3 */
-		i = get_free_idx(mask, HW_BSSID_1, HW_BSSID_3);
+		i = get_free_idx(mask, HW_BSSID_1, upper_hw_omac_limit);
 		if (i)
 			return i - 1;
 
@@ -195,14 +220,15 @@ static int get_omac_idx(enum nl80211_iftype type, u64 mask)
 		if (i)
 			return i - 1;
 
-		if (~mask & BIT(HW_BSSID_0))
-			return HW_BSSID_0;
-
 		break;
 	case NL80211_IFTYPE_MONITOR:
 	case NL80211_IFTYPE_AP:
+		/* Count the out-of-reach HW_BSSID_1-3, which are used for non-AP STAs */
+		this_phy_available_hw_links -= hweight64(mask &
+							 GENMASK_ULL(HW_BSSID_3, HW_BSSID_1));
+
 		/* ap uses hw bssid 0 and ext bssid */
-		if (~mask & BIT(HW_BSSID_0))
+		if (~mask & BIT(HW_BSSID_0) && this_phy_available_hw_links > 0)
 			return HW_BSSID_0;
 
 		i = get_free_idx(mask, EXT_BSSID_1, EXT_BSSID_MAX);
@@ -427,7 +453,7 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 		 "%s:  vif_link_add called, link_id: %d.\n",
 		 __func__, it.link_id);
 
-	idx = get_omac_idx(vif->type, phy->omac_mask);
+	idx = get_omac_idx(vif->type, phy);
 	if (idx < 0)
 		return -ENOSPC;
 
