@@ -143,7 +143,7 @@ static const char ieee80211_gstrings_sta_stats[][ETH_GSTRING_LEN] = {
 	"sta_state",
 	"txrate",
 	"rxrate",
-	"signal"
+	"signal",
 	"signal_beacon",
 	"signal_chains",
 	"signal_chains_avg", 
@@ -162,6 +162,7 @@ static const char ieee80211_gstrings_sta_stats[][ETH_GSTRING_LEN] = {
 	"L1:tx_filtered",
 	"L1:tx_retry_failed",
 	"L1:tx_retries",
+	"L1:tx_handlers_drop",
 	"L1:sta_state",
 	"L1:txrate",
 	"L1:rxrate",
@@ -184,6 +185,7 @@ static const char ieee80211_gstrings_sta_stats[][ETH_GSTRING_LEN] = {
 	"L2:tx_filtered",
 	"L2:tx_retry_failed",
 	"L2:tx_retries",
+	"L2:tx_handlers_drop",
 	"L2:sta_state",
 	"L2:txrate",
 	"L2:rxrate",
@@ -206,6 +208,7 @@ static const char ieee80211_gstrings_sta_stats[][ETH_GSTRING_LEN] = {
 	"L3:tx_filtered",
 	"L3:tx_retry_failed",
 	"L3:tx_retries",
+	"L3:tx_handlers_drop",
 	"L3:sta_state",
 	"L3:txrate",
 	"L3:rxrate",
@@ -231,6 +234,7 @@ struct ieee80211_ethtool_data_vdev_stats {
 	u64 tx_filtered;
 	u64 tx_retry_failed;
 	u64 tx_retries;
+	u64 tx_handlers_drop;
 	u64 sta_state;
 	u64 txrate;
 	u64 rxrate;
@@ -290,6 +294,7 @@ static const char ieee80211_gstrings_sta_vdev_stats[][ETH_GSTRING_LEN] = {
 	"tx_filtered",
 	"tx_retry_failed",
 	"tx_retries",
+	"tx_handlers_drop",
 	"sta_state",
 	"txrate",
 	"rxrate",
@@ -522,6 +527,7 @@ static void ieee80211_get_stats2_vdev(struct net_device *dev,
 
 		ADD_STA_STATS(data, sinfo, &sta->deflink);
 
+		data->tx_handlers_drop = sdata->tx_handlers_drop;
 		data->sta_state = sta->sta_state;
 
 		if (sinfo.filled & BIT_ULL(NL80211_STA_INFO_TX_BITRATE))
