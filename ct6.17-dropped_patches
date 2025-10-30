@@ -1,0 +1,175 @@
+fb6bf2088eb6 | wifi: mt76: mt7996: Mitigate mcu communication loss.
+9f3aaf6691cf | mtk: mt76: mt7996: Fix call trace happened when wed attach fail
+bfe012756257 | mt76: MLO part of the add debug tools patch.
+	     | mtk7996:  Add debugfs muru configurables.
+	     | mtk7996:  relay-pkt-to-host debugging
+	     | mtk7996:  Add vifs debugfs support.
+	     | mt7996:  Add link sta debugfs.
+	     | mtk7996:  Thermal protection debugfs support
+8eefe9ccf4c2 | mtk: mt76: mt7996: add critical update support
+a34982a0b258 | mtk: mt76: mt7996: trigger channel calibration for DFS link after sta
+45d374e047a1 | mtk: mac80211: Add exported function for SoftMAC driver to get QoS map
+925d1faacc10 | mtk: mt76: mt7996: Fix inconsistent QoS mapping between SW and HW
+	     | mtk7996:  mac:  Record msta_link signal.
+334930d1566c | mtk: mt76: mt7996: add AP affiliated link removal support
+cb3b237a8349 | mtk: mt76: mt7996: add support for AP A-TTLM
+e44c5743f388 | mtk: mt76: mt7996: Add Triggered Uplink Access Optimization support
+ea92c8b73968 | mtk: mt76: mt7996: record per-antenna average data-frame RSSI
+96c1e7bcfc36 | mtk: mt76: mt7996: add Adv-TTLM support for STA
+b7e493920bb3 | mtk: mt76: mt7996: add CU event notification support
+3a586433a695 | mtk: mt76: mt7996: Fix add ba related issues
+c52d9d8cad06 | mtk: wifi: mt76: mt7996: Add support for TSF offset
+fd92b9803d1f | mtk: mac80211: Add vht operating mode notification vendor flag
+238945749506 | mtk: mt76: mt7996: Refactor handling vht operating mode notification
+	     | mtk: mt76: mt7996: 11v+MLD critical update support
+c913b0e3248c | mtk: mt76: mt7996: move debug APIs to common part
+cadf4a034251 | mtk: mt76: mt7996: set TTLM negotiation support flag
+f4afdd80ca73 | mtk: mt76: mt7996: set TTLM on a STA MLD
+e9be50544945 | mtk: mt76: mt7996: set single STA's TTLM on AP MLD
+a017d5ec6aa6 | mtk: mt76: mt7996: set neg-ttlm related action frames to ALTX queue
+90edf86d38c8 | mtk: mt76: mt7996: add STA TX pause mechanism for CSA
+388673e842ec | mtk: mt76: mt7996: enable qos program related bit in extended capabili
+589f4995aed7 | mtk: mt76: mt7996: add support for EPCS
+d0c008656d87 | mtk: mt76: mt7996: fix monitor mode cpu busy issue
+903eccf23368 | mtk: mt76: mt7996: send addba request after authorized
+5ad37dce7d09 | mtk: mt76: mt7996: add remove key for bigtk
+a1ca4973484f | mtk: mt76: mt7996: fix the long registration time issue
+	     | wifi: mt76: mt7996:  Protect against null mconf in mt7996_check_limit_
+	     | mt7996:  Add debugfs and vendor logic from mtk debug patch.
+	     | mt7996:  Make more debugfs files per-band.
+	     | mtk7996:  Sync with latest upstream owrt feeds tree.
+59db79779b6a | mtk: mt76: mt7996: add per-band token limit
+b3f53164dfdf | mtk: mt76: mt7996: add low power control for mt7990
+eb4627f02e23 | mtk: mt76: mt7996: fix condition in mt7996_ampdu_action()
+f76977184536 | mtk: mt76: mt7996: add dfs detection mode
+fcd1a6a166c1 | mtk: mt76: per band sw token needs to consider MLO affiliated link case
+3fd648d47068 | mtk: mt76: mt7996: use altxq when IEEE80211_TX_CTL_TX_OFFCHAN is true
+51bc967b7f32 | wifi: mt76: mt7996: Minor refactor of mt7996_mcu_update_trx_rates
+	     | mt7996:  Comment out some WED3 dscp code.
+	     | mtk7996:  CSI vendor code from big debug patch
+	     | mtk7996:  Add vendor code from big debug patch.
+c3f43bea391d | mtk: mt76: mt7996: replace band idx with radio idx in vendor command
+191b46b80f89 | mtk: mt76: mt7996: get color bitmap on link's bss_conf according link_id
+bb4c54996053 | mtk: mt76: mt7996: fix and refactor air monitor
+33942d52f1c2 | mtk: mac80211: add new argument link_id in set_bitrate_mask
+50df34c77315 | mt7996: Improve error message around pp-enable vendor cmd.
+c4b47de95b4b | mtk: mt76: Add dynamic pp vendor and debug pp algo cmd support
+383baab72d63 | mtk: mt76: mt7996: support configure trigger frame and coding type
+	     | mt7996:  Sync MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_OFDMA with hostapd
+	     | mt7996:  Reorder vendor.h to better match hostapd.
+ 3113ece8c9e | mtk: mt76: mt7996: Add support for EMLSR
+             | mt7996:  Reorder vendor.h to better match hostapd vendor file.
+	     | mt7996:  Apply pp_mode when mode changes too.
+	     | mtk7996:  Add per-link station info stats.
+	     | mt7996:  Improve tx stat
+bfe7af1683b0 | wifi: mt76: mt7996: Fix wrong condition for beacon work disable.
+	     | mt7996:  Improve per-link tx packet stats.
+	     | wifi: mt76: mt7996: fix mld_link_op_tlv alignment
+	     | mt7996:  Do not create wlans by default.
+	     | mt7996:  Fix per-link tx-packets counters.
+	     | mt7996:  Support rx-mpdu per link stats.
+d84fafa21368 | wifi: mt76: mt7996: Fix station stats crash
+d7b6e21171af | wifi: mt76: mt7996: Initialize wcid queues as early as possible
+e029904a3beb | wifi: mt76: mt7996: Fix beacon hint
+75961a81e663 | wifi: mt76: mt7996: Add per-link debugfs WTBL dump
+0a761a5b6ee4 | wifi: mt76: mt7996: guard NPE in debugfs link info
+	     | mt7996:  Fix MLO packet reordering.
+	     | wifi: mt76: mt7996:  Add tx/rx bw counters to link_sta_info
+	     | wifi: mt76: mt7996:  Support MLO ethtool stats.
+	     | mtk7996:  Improve whitespace in agginfo debugfs output.
+	     | mtk7996:  Accumulate and print accumulated agginfo values.
+5ee30263e301 | wifi: mt76: mt7996: Clean up all links on VIF removal
+7d8ee14d41ac | wifi: mt76: mt7996: Remove unused variable in mt7996_get_et_stats
+f4ed3552560f | wifi: Support setting tx/rx-antenna per radio.
+a061de1729cd | mtk: mac80211: check the control channel before downgrading the bandwidth
+f42b547b91ca | mtk: mac80211: fix tx amsdu aggregation
+5e0730c1782d | mtk: mac80211: track obss color bitmap
+3d771c313d4e | mtk: mac80211: support configurable addba resp time.
+5c4c27fddefe | mtk: mac80211: Fix SMPS action frame cap check
+5e432c289997 | mtk: mac80211: use link address for eapol source in ieee80211_tx_control_port()
+52928e9b7328 | mtk: mac80211: fix ieee80211_probe_client warning
+fdfb380c7bd5 | mtk: mac80211: fix ieee80211_ht_cap_ie_to_sta_ht_cap warn on
+4c1fb7d43e1d | mtk: mac80211: prevent STA MLD's link addr from being randaomized
+a247ff95e169 | mtk: mac80211: add mlo probe client support
+0c9fb1269981 | mtk: mac80211: add mlo related debugfs knob
+d5a0af3021da | mtk: mac80211: Fix channel switch punct bitmap would be clean bug in STA mode
+9a455a196db6 | mtk: mac80211: add SCS capa definition
+fa764106c475 | mtk: mac80211: fix ieee80211_mgmt_tx
+43925b94610d | mtk: wifi: fix eht mcs nss size calculation
+6d9952450bde | mtk: mac80211: re-define BIT 7 in capability information
+9a920d29e4cd | mtk: mac80211: pass valid links to mt7996 when update vif's links in mac80211
+d59792eaa970 | mac80211: mtk: add support QoS prgram related bit in extended capabilities
+5de43635b0e0 | mtk: mac80211: refactor BSS color change & collision detection
+8f9df325c779 | mtk: mac80211: fix non-TX BSS checking in ieee802_11_parse_elems_full()
+0a1a8b7da2e2 | mtk: mac80211: fixup sanity check in ieee80211_build_hdr()
+6337ec718f4b | mtk: mac80211: ACS channel time is reset by ch_restore
+ae5881374220 | mtk: mac80211: add per-sta prof CSA countdown support
+45d374e047a1 | mtk: mac80211: Add exported function for SoftMAC driver to get QoS map
+5c56a6b0adb4 | mtk: mac80211: add ieee80211_links_removed() to support MLD AP reconf
+5cbe0d02ec32 | mtk7996:  First part of large combined patch of random stuff.
+> Some actually interesting things here
+34fdc9af19f0 | mtk7996:  Part of grab-bag patch seems like it could be reasonable.
+> Some actually interesting things here
+dcf07eb6cd41 | mt7996:  Add some debug from grab bag patch.
+cdbc6211c0fa | mtk: mac80211: add A-TTLM support
+c651a057fd8f | mtk: mac80211: add CU event notification support
+89374488eb58 | mtk: mac80211: Add TSF offset event support
+fd92b9803d1f | mtk: mac80211: Add vht operating mode notification vendor flag
+8bf2f504446b | mt7996:  Part of another grab-bag patch.
+> Some actually interesting things here
+1886e80d6922 | mtk: mac80211: add STA A-TTLM support
+b476e8e5735e | mtk: mac80211: refactor struct cfg80211_ttlm_params
+402bc32e3be4 | mtk: mac80211: set single STA's TTLM on AP MLD
+fce74a3db984 | mtk: mac80211: refactor STA set Neg-TTLM
+e05a2685361f | mt7996/mac80211: Support active-links api difference.
+a94fc5bc4e80 | mtk: mac80211: fix radio idx missing after replace ctx
+7e5c75e3aa00 | mtk: mac80211: trigger a beacon update after setting beacon key
+a529c9d805a4 | mtk: mac80211: copy protocol info to non-first fragments
+3ef79bf07162 | mtk: mac80211: fix addba buffer size
+1fdaa2e7210f | mtk: temporarily skip SSID check for non-TX BSS
+04d606d93de1 | mtk: mac80211: do not setup twt when twt responder is false
+2987e0c7258e | mtk: cfg80211: extend CAC time for weather radar channels
+47926ed17a2c | mtk: mac80211: it's invalid case when frag_threshold is greater than 2346
+7e4f0100a2ee | mtk: cfg80211: implement DFS status show, cac and nop skip command via debugfs
+60da23d8dd9a | mtk: mac80211: Set TWT Information Frame Disabled bit as 1.
+825b8ea50037 | mtk: nl80211: Mark DFS channel as available for CSA.
+4800b43473e5 | mtk: cfg80211: fix early return in cfg80211_stop_background_radar_detection
+ee33a6e42c02 | mtk: cfg80211: add background radar stop when background channel is overlapped with operating channel
+47393fa94229 | mtk: mac80211: avoid kernel warning of check_flush_dependency
+c6ebde3eca01 | mtk: mac80211: add send bar action when recieve addba rsp
+17131b8d1a10 | mtk: mac80211: inrease beacon loss count
+dfbada8760ce | mtk: cfg80211: add support for updating background channel
+ac5f5f81b736 | mtk: mac80211: Allow STA interface to set TX queue parameters
+860f37213881 | mtk: mac80211: add per-bss flag to support vendors counter
+49bd52b4fdc2 | mtk: mac80211: Add cert mode to disable ba timeout
+416ed29032a6 | mtk: mac80211: allow multiple links for STA vif
+e1069a403407 | mtk: mac80211: increase association timeout time
+d06db16b7248 | mtk: cfg80211: implement DFS radar detect for MLO
+3afa171c4b80 | mtk: mac80211: add wds mlo support
+f3e89b60d9dc | mtk: mac80211: remove link != 0 warn on in rate_control_rate_update for mlo channel switch
+89f175e6acf1 | mtk: mac80211: fix radar required of link issue in reserve_reassign and reserve_assign
+efd082f1c08f | mtk: mac80211: remove links when removing AP_VLAN interface
+2badab3f7637 | mtk: mac80211: fix AP mgmt not encrypted in WDS mode with PMF on
+134d4f0f5c23 | mtk: mac80211: fix mac address to support hw path in station mode
+0abfa4a44235 | mtk: mac80211: send broadcast/multicast mgmt. via all links.
+dc42adc1a0a6 | mtk: mac80211: not to check 'need_offchan' for MLD multicast mgmt.
+0131801222fe | mtk: mac80211: assign link address to the header of broadcast mgmt
+d22db93530a5 | mtk: mac80211: Do MLD address translation before STA process BMC mgmt. frame
+4868f7cc2019 | mtk: mac80211: defer enabling beacon for MLD AP
+b327a3e8ef02 | mtk: mac80211: Add support for EMLSR support
+b3d8512c4238 | mtk: mac80211: legacy AP scan request should contain valid channels
+b0b5e6f19935 | mtk: mac80211: add DFS CAC countdown in CSA flow
+33942d52f1c2 | mtk: mac80211: add new argument link_id in set_bitrate_mask
+8cb4228947a2 | mtk: mac80211: Add ba_disable debugfs to disable ba
+91537753242d | mtk: mac80211: fix incorrect VIF assignment for IEEE 802.11 fragments
+71f2b2e1a969 | mtk: mac80211: Add STA site link add support
+89bbf167ced6 | nl80211: sync with mtk and other out-of-tree netlink cmds.
+04ab28cd8581 | mt7996: Fix per-link tx-packets counters.
+071863d011da | mtk: mac80211: do not set AP_VLAN device off until all links become unusable
+d98306e2c336 | mtk: mac80211: Fix CAC event call trace
+cf8ebd141a2c | mtk: mac80211: fix cross link csa issue
+94f4d8fef842 | mtk: mac80211: use link_conf instead of sdata->vif.bss_conf in ieee80211_assign_beacon
+559c89a50a11 | mtk: mac80211: retransmit 4addr nullfunc if the ACK is not received
+38e1480aa7d6 | mtk: mac80211: sync from felix
+9692eef2040a | mtk: mac80211: update scan req to skip prohibited bands and channels
+eafe4a9658c5 | mtk: mac80211: relax the DFS restrictions for scanning
