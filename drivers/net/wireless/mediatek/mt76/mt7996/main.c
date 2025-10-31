@@ -1973,7 +1973,7 @@ static void mt7996_link_rate_ctrl_update(void *data,
 					 struct mt7996_sta_link *msta_link)
 {
 	struct mt7996_sta *msta = msta_link->sta;
-	struct mt7996_dev *dev = msta->vif->deflink.phy->dev;
+	struct mt7996_dev *dev = mt7996_vif_to_dev(msta->vif);
 	u32 *changed = data;
 
 	spin_lock_bh(&dev->mt76.sta_poll_lock);
@@ -2499,10 +2499,11 @@ static void mt7996_ethtool_worker(void *wi_data, struct ieee80211_sta *sta)
 	int i;
 
 	for (i = 0; i<IEEE80211_MLD_MAX_NUM_LINKS; i++) {
-		msta_link = mt76_dereference(msta->link[i], &mvif->deflink.phy->dev->mt76);
+		msta_link = mt76_dereference(msta->link[i],
+					     &mt7996_vif_to_dev(mvif)->mt76);
 		if (!msta_link)
 			continue;
-		mconf = mt7996_vif_link(mvif->deflink.phy->dev, vif, i);
+		mconf = mt7996_vif_link(mt7996_vif_to_dev(mvif), vif, i);
 		if (!mconf)
 			continue;
 		if ((mconf->mt76.idx != wi->indices[0]) &&

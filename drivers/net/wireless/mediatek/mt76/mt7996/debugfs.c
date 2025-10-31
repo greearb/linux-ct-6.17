@@ -1189,7 +1189,7 @@ mt7996_sta_hw_queue_read(void *data, struct ieee80211_sta *sta)
 {
 	struct mt7996_sta *msta = (struct mt7996_sta *)sta->drv_priv;
 	struct mt7996_vif *mvif = msta->vif;
-	struct mt7996_dev *dev = mvif->deflink.phy->dev;
+	struct mt7996_dev *dev = mt7996_vif_to_dev(mvif);
 	struct ieee80211_link_sta *link_sta;
 	struct seq_file *s = data;
 	struct ieee80211_vif *vif;
@@ -2110,7 +2110,7 @@ static ssize_t mt7996_sta_fixed_rate_set(struct file *file,
 #define LONG_PREAMBLE 1
 	struct ieee80211_sta *sta = file->private_data;
 	struct mt7996_sta *msta = (struct mt7996_sta *)sta->drv_priv;
-	struct mt7996_dev *dev = msta->vif->deflink.phy->dev;
+	struct mt7996_dev *dev = mt7996_vif_to_dev(msta->vif);
 	struct mt7996_sta_link *msta_link = &msta->deflink;
 	struct ra_rate phy = {};
 	char buf[100];
@@ -2184,7 +2184,7 @@ mt7996_sta_links_info_show(struct seq_file *s, void *data)
 	struct ieee80211_sta *sta = s->private;
 	struct mt7996_sta *msta = (struct mt7996_sta *)sta->drv_priv;
 	u64 tx_cnt = 0, tx_fails = 0, tx_retries = 0, rx_cnt = 0;
-	struct mt7996_dev *dev = msta->vif->deflink.phy->dev;
+	struct mt7996_dev *dev = mt7996_vif_to_dev(msta->vif);
 	unsigned long valid_links;
 	u8 link_id;
 
