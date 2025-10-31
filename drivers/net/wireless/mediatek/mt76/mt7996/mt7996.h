@@ -734,6 +734,15 @@ mt7996_vif_link_phy(struct mt7996_vif_link *link)
 	return mphy->priv;
 }
 
+static inline struct mt7996_dev *
+mt7996_vif_to_dev(struct mt7996_vif *mvif) {
+    struct ieee80211_vif *vif = container_of((void *)mvif,
+					     struct ieee80211_vif, drv_priv);
+    struct wiphy *wiphy = ieee80211_vif_to_wdev(vif)->wiphy;
+    struct ieee80211_hw *hw = wiphy_to_ieee80211_hw(wiphy);
+    return mt7996_hw_dev(hw);
+}
+
 static inline struct mt7996_vif_link *
 mt7996_vif_conf_link(struct mt7996_dev *dev, struct ieee80211_vif *vif,
 		     struct ieee80211_bss_conf *link_conf)
