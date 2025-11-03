@@ -5320,16 +5320,9 @@ static int mtk_probe(struct platform_device *pdev)
 			eth->sram_pool = of_gen_pool_get(pdev->dev.of_node,
 							 "sram", 0);
 			if (!eth->sram_pool) {
-				if (!mtk_is_netsys_v3_or_greater(eth)) {
-					err = mtk_setup_legacy_sram(eth, res);
-					if (err)
-						goto err_destroy_sgmii;
-				} else {
-					dev_err(&pdev->dev,
-						"Could not get SRAM pool\n");
-					err = -EINVAL;
+				err = mtk_setup_legacy_sram(eth, res);
+				if (err)
 					goto err_destroy_sgmii;
-				}
 			}
 		}
 	}
