@@ -20,6 +20,12 @@ MODULE_PARM_DESC(debug_lvl,
 		 "0x00040	block-ack and aggregation related\n"
 		 "0x00080	verbose rx path\n"
 		 "0x00100	Last n messages to MCU when something goes wrong\n"
+		 "0x00200       MLD related\n"
+	         "0000400       STA related\n"
+		 "0x00800       BSS related\n"
+		 "0x01000       DEV related\n"
+		 "0x02000       Scan related\n"
+		 "0x04000       Channel related\n"
 		 "0x08000	Verbose MCU debugging\n"
 		 "0xffffffff	any/all\n"
 	);
@@ -558,8 +564,8 @@ void mt7996_vif_link_remove(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 		ieee80211_iter_keys(mphy->hw, vif, mt7996_key_iter, &it);
 
 	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
-		 "%s: band=%u, bss_idx=%u, link_id=%u, wcid=%u\n",
-		 __func__, phy->mt76->band_idx, mlink->idx, it.link_id, idx);
+		 "%s: band=%u, bss_idx=%u, link_id=%u, wcid=%u hw: %px\n",
+		 __func__, phy->mt76->band_idx, mlink->idx, it.link_id, idx, mphy->hw);
 
 	mt7996_mcu_add_sta(dev, link_conf, NULL, link, NULL,
 			   CONN_STATE_DISCONNECT, false);
