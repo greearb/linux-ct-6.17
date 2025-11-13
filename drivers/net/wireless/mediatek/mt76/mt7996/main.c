@@ -459,8 +459,8 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	int mld_idx, idx, ret;
 
 	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
-		 "%s:  vif_link_add called, link_id: %d.\n",
-		 __func__, it.link_id);
+		 "%s:  vif_link_add called, link_id: %d vif-addr: %pM.\n",
+		 __func__, it.link_id, vif->addr);
 
 	idx = get_omac_idx(vif->type, phy);
 	if (idx < 0)
@@ -506,7 +506,7 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	msta_link->wcid.link_id = link_conf->link_id;
 	msta_link->wcid.link_valid = ieee80211_vif_is_mld(vif);
 	msta_link->wcid.tx_info |= MT_WCID_TX_INFO_SET;
-	mt76_wcid_init(&msta_link->wcid, band_idx);
+	mt76_wcid_init(&dev->mt76, &msta_link->wcid, band_idx, vif->addr);
 
 	mt7996_mac_wtbl_update(dev, idx,
 			       MT_WTBL_UPDATE_ADM_COUNT_CLEAR);
@@ -541,6 +541,10 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	if (!mlink->wcid->offchannel &&
 	    mvif->mt76.deflink_id == IEEE80211_LINK_UNSPECIFIED)
 		mvif->mt76.deflink_id = link_conf->link_id;
+
+	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
+		 "%s:  vif_link_add end, link_id: %d wcid-idx: %d wcid: %px band-idx: %d\n",
+		 __func__, link_conf->link_id, idx, &msta_link->wcid, band_idx);
 
 	return 0;
 }
@@ -1157,6 +1161,8 @@ mt7996_mac_sta_init_link(struct mt7996_dev *dev,
 	struct mt7996_sta *msta = (struct mt7996_sta *)sta->drv_priv;
 	struct mt7996_phy *phy = link->phy;
 	struct mt7996_sta_link *msta_link;
+	struct mt7996_vif *mvif = msta->vif;
+	struct ieee80211_vif *vif = container_of((void *)mvif, struct ieee80211_vif, drv_priv);
 	int idx, ret = 0;
 
 	idx = mt76_wcid_alloc(dev->mt76.wcid_mask, MT7996_WTBL_STA);
@@ -1209,7 +1215,7 @@ mt7996_mac_sta_init_link(struct mt7996_dev *dev,
 	}
 
 	rcu_assign_pointer(dev->mt76.wcid[idx], &msta_link->wcid);
-	mt76_wcid_init(&msta_link->wcid, phy->mt76->band_idx);
+	mt76_wcid_init(&dev->mt76, &msta_link->wcid, phy->mt76->band_idx, vif->addr);
 
 error:
 	return ret;
