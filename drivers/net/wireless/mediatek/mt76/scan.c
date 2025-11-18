@@ -16,7 +16,7 @@ static void mt76_scan_complete(struct mt76_dev *dev, bool abort)
 
 	clear_bit(MT76_SCANNING, &phy->state);
 
-	if (dev->scan.chan && phy->main_chandef.chan &&
+	if (dev->scan.chan && phy->main_chandef.chan && phy->offchannel &&
 	    !test_bit(MT76_MCU_RESET, &dev->phy.state))
 		mt76_set_channel(phy, &phy->main_chandef, false);
 	mt76_put_vif_phy_link(phy, dev->scan.vif, dev->scan.mlink);
@@ -103,7 +103,7 @@ void mt76_scan_work(struct work_struct *work)
 		return;
 	}
 
-	if (dev->scan.chan && phy->num_sta) {
+	if (dev->scan.chan && phy->num_sta && phy->offchannel) {
 		mt76_dbg(dev, MT76_DBG_SCAN, "%s: moving back to main chandef freq: %d\n",
 			 __func__, phy->main_chandef.chan ? phy->main_chandef.chan->center_freq : -1);
 		dev->scan.chan = NULL;
@@ -126,7 +126,6 @@ void mt76_scan_work(struct work_struct *work)
 
 		if (chandef.chan->flags & (IEEE80211_CHAN_NO_IR | IEEE80211_CHAN_RADAR))
 			goto out;
-
 	} else {
 		mt76_dbg(dev, MT76_DBG_SCAN, "%s: scanning on-channel for freq: %d for chan_idx: %d\n",
 			 __func__, dev->scan.chan->center_freq, dev->scan.chan_idx);
@@ -135,7 +134,8 @@ void mt76_scan_work(struct work_struct *work)
 	if (!req->n_ssids)
 		goto out;
 
-	duration = HZ / 16; /* ~60 ms */
+	if (phy->offchannel)
+		duration = HZ / 16; /* ~60 ms */
 	local_bh_disable();
 	for (i = 0; i < req->n_ssids; i++) {
 		mt76_dbg(dev, MT76_DBG_SCAN, "%s: Sending probe request to %s\n",
@@ -145,7 +145,7 @@ void mt76_scan_work(struct work_struct *work)
 	local_bh_enable();
 
 out:
-	if (dev->scan.chan)
+	if (dev->scan.chan && phy->offchannel)
 		duration = max_t(int, duration,
 			         msecs_to_jiffies(req->duration +
 						  (req->duration >> 5)));
