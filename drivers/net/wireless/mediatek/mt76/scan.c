@@ -140,16 +140,18 @@ void mt76_scan_work(struct work_struct *work)
 	/* If we are scanning on current mgt channel, we do not need
 	 * to go off-channel.
 	 */
-	if (!dev->scan.chan || !phy->main_chandef.chan ||
-	    dev->scan.chan->center_freq != phy->main_chandef.chan->center_freq) {
+	if (dev->scan.chan != phy->main_chandef.chan) {
 		cfg80211_chandef_create(&chandef, dev->scan.chan, NL80211_CHAN_HT20);
 		mt76_set_channel(phy, &chandef, true);
 		mt76_dbg(dev, MT76_DBG_SCAN, "%s: moving freq: %d for chan_idx: %d\n",
 			 __func__, dev->scan.chan ? dev->scan.chan->center_freq : -1,
 			 dev->scan.chan_idx);
 
-		if (chandef.chan->flags & (IEEE80211_CHAN_NO_IR | IEEE80211_CHAN_RADAR))
+		if (chandef.chan->flags & (IEEE80211_CHAN_NO_IR | IEEE80211_CHAN_RADAR)) {
+			dev->scan.beacon_received = false;
+			dev->scan.beacon_wait = true;
 			goto out;
+		}
 	} else {
 		mt76_dbg(dev, MT76_DBG_SCAN, "%s: scanning on-channel for freq: %d for chan_idx: %d\n",
 			 __func__, dev->scan.chan->center_freq, dev->scan.chan_idx);
@@ -157,12 +159,6 @@ void mt76_scan_work(struct work_struct *work)
 
 	if (!req->n_ssids)
 		goto out;
-
-	if (chandef.chan->flags & (IEEE80211_CHAN_NO_IR | IEEE80211_CHAN_RADAR)) {
-		dev->scan.beacon_received = false;
-		dev->scan.beacon_wait = true;
-		goto out;
-	}
 
 probe:
 	if (phy->offchannel)
@@ -183,7 +179,7 @@ out:
 
 	ieee80211_queue_delayed_work(dev->phy.hw, &dev->scan_work, duration);
 
-	mt76_dbg(dev, MT76_DBG_SCAN, "%s: move to active scan on channel %d\n",
+	mt76_dbg(dev, MT76_DBG_SCAN, "%s: move to scan state on channel %d\n",
 		 __func__, phy->chandef.center_freq1);
 }
 
