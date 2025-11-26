@@ -7,7 +7,7 @@
 #include "mcu.h"
 #include "mac.h"
 
-u32 debug_lvl = MTK_DEBUG_FATAL | MTK_DEBUG_WRN;
+u32 debug_lvl = MT76_DBG_FATAL | MT76_DBG_WRN;
 module_param(debug_lvl, uint, 0644);
 MODULE_PARM_DESC(debug_lvl,
 		 "Enable debugging messages\n"
@@ -21,7 +21,7 @@ MODULE_PARM_DESC(debug_lvl,
 		 "0x00080	verbose rx path\n"
 		 "0x00100	Last n messages to MCU when something goes wrong\n"
 		 "0x00200       MLD related\n"
-	         "0000400       STA related\n"
+		 "0000400       STA related\n"
 		 "0x00800       BSS related\n"
 		 "0x01000       DEV related\n"
 		 "0x02000       Scan related\n"
@@ -117,7 +117,7 @@ static int mt7996_start(struct ieee80211_hw *hw)
 	struct mt7996_dev *dev = mt7996_hw_dev(hw);
 	int ret;
 
-	dev->mt76.debug_lvl = debug_lvl;
+	dev->mt76.debug_lvl = &debug_lvl;
 
 	flush_work(&dev->init_work);
 
@@ -458,9 +458,9 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	struct mt76_txq *mtxq;
 	int mld_idx, idx, ret;
 
-	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
-		 "%s:  vif_link_add called, link_id: %d vif-addr: %pM.\n",
-		 __func__, it.link_id, vif->addr);
+	mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS,
+		      "%s:  vif_link_add called, link_id: %d vif-addr: %pM.\n",
+		      __func__, it.link_id, vif->addr);
 
 	idx = get_omac_idx(vif->type, phy);
 	if (idx < 0)
@@ -472,8 +472,8 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 		mlink->idx = find_next_zero_bit(dev->mt76.vif_mask, MT76_MAX_VIFS,
 						MT7996_FIRST_REPEATER_VIF_IDX);
 	if (mlink->idx >= mt7996_max_interface_num(dev)) {
-		mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: IF limit reached: %d/%d\n", __func__,
-			 mlink->idx, mt7996_max_interface_num(dev));
+		mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS, "%s: IF limit reached: %d/%d\n",
+			      __func__, mlink->idx, mt7996_max_interface_num(dev));
 		return -ENOSPC;
 	}
 
@@ -486,8 +486,8 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 
 		mld_idx = get_own_mld_idx(dev->mld_idx_mask, false);
 		if (mld_idx < 0) {
-			mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: No more MLD IDs to alloc\n",
-				 __func__);
+			mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS,
+				      "%s: No more MLD IDs to alloc\n", __func__);
 			return -ENOSPC;
 		}
 	} else {
@@ -509,7 +509,8 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 
 	ret = mt7996_mcu_add_dev_info(phy, vif, link_conf, mlink, true);
 	if (ret) {
-		mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: Add dev info failed: %d\n", __func__, ret);
+		mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS, "%s: Add dev info failed: %d\n",
+			      __func__, ret);
 		return ret;
 	}
 
@@ -567,9 +568,9 @@ int mt7996_vif_link_add(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	    mvif->mt76.deflink_id == IEEE80211_LINK_UNSPECIFIED)
 		mvif->mt76.deflink_id = link_conf->link_id;
 
-	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
-		 "%s:  vif_link_add end, link_id: %d wcid-idx: %d mld-id: %d wcid: %px band-idx: %d\n",
-		 __func__, link_conf->link_id, idx, mld_idx, &msta_link->wcid, band_idx);
+	mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS,
+		      "%s: at end, link_id: %d wcid-idx: %d mld-id: %d wcid: %px band-idx: %d\n",
+		      __func__, link_conf->link_id, idx, mld_idx, &msta_link->wcid, band_idx);
 
 	return 0;
 }
@@ -592,9 +593,9 @@ void mt7996_vif_link_remove(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	if (!mlink->wcid->offchannel)
 		ieee80211_iter_keys(mphy->hw, vif, mt7996_key_iter, &it);
 
-	mt76_dbg(&dev->mt76, MT76_DBG_BSS,
-		 "%s: band=%u, bss_idx=%u, link_id=%u, wcid=%u hw: %px\n",
-		 __func__, phy->mt76->band_idx, mlink->idx, it.link_id, idx, mphy->hw);
+	mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS,
+		      "%s: band=%u, bss_idx=%u, link_id=%u, wcid=%u hw: %px\n",
+		      __func__, phy->mt76->band_idx, mlink->idx, it.link_id, idx, mphy->hw);
 
 	mt7996_mcu_add_sta(dev, link_conf, NULL, link, NULL,
 			   CONN_STATE_DISCONNECT, false);
@@ -602,12 +603,13 @@ void mt7996_vif_link_remove(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 
 	/* If we need to, transition this wlan into the master for repeater stations. */
 	if (mlink->omac_idx == MT7996_MASTER_OMAC_IDX && mt7996_has_repeater_stations(phy)) {
-		mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: Transitioning to master omac\n", __func__);
+		mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS, "%s: Transitioning to master omac\n",
+			      __func__);
 		__mt7996_configure_master_omac(phy, true);
 	} else {
 		if (mlink->omac_idx >= REPEATER_BSSID_START && !mt7996_has_repeater_stations(phy)) {
-			mt76_dbg(&dev->mt76, MT76_DBG_BSS, "%s: Last repeater link removed\n",
-			         __func__);
+			mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS,
+				      "%s: Last repeater link removed\n", __func__);
 			mt7996_configure_master_omac(phy, false);
 		}
 
@@ -1316,8 +1318,8 @@ mt7996_mac_sta_add_links(struct mt7996_dev *dev, struct ieee80211_vif *vif,
 	unsigned int link_id;
 	int err = 0;
 
-	mt76_dbg(&dev->mt76, MT76_DBG_STA,
-		 "%s: new_links=0x%lx\n", __func__, new_links);
+	mt76_vif_dbg(&dev->mt76, &msta->vif->mt76, MT76_DBG_STA,
+		     "%s: new_links=0x%lx\n", __func__, new_links);
 	for_each_set_bit(link_id, &new_links, IEEE80211_MLD_MAX_NUM_LINKS) {
 		struct ieee80211_bss_conf *link_conf;
 		struct ieee80211_link_sta *link_sta;
@@ -1329,36 +1331,36 @@ mt7996_mac_sta_add_links(struct mt7996_dev *dev, struct ieee80211_vif *vif,
 
 		link_conf = link_conf_dereference_protected(vif, link_id);
 		if (!link_conf) {
-			mt76_dbg(&dev->mt76, MT76_DBG_STA,
-				 "%s: WARNING: STA %pM link_id: %d could not find link_conf: %p\n",
-				 __func__, sta->addr, link_id, link_conf);
+			mt76_vif_dbg(&dev->mt76, &msta->vif->mt76, MT76_DBG_STA,
+				     "%s: WARNING: STA %pM link_id: %d could not find link_conf\n",
+				     __func__, sta->addr, link_id);
 			err = -EINVAL;
 			goto error_unlink;
 		}
 
 		link = mt7996_vif_link(dev, vif, link_id);
 		if (!link) {
-			mt76_dbg(&dev->mt76, MT76_DBG_STA,
-				 "%s: WARNING: STA %pM link_id: %d could not find link: %p\n",
-				 __func__, sta->addr, link_id, link);
+			mt76_vif_dbg(&dev->mt76, &msta->vif->mt76, MT76_DBG_STA,
+				     "%s: WARNING: STA %pM link_id: %d could not find link\n",
+				     __func__, sta->addr, link_id);
 			err = -EINVAL;
 			goto error_unlink;
 		}
 
 		link_sta = link_sta_dereference_protected(sta, link_id);
 		if (!link_sta) {
-			mt76_dbg(&dev->mt76, MT76_DBG_STA,
-				 "%s: WARNING: STA %pM link_id: %d could not find link_sta: %p\n",
-				 __func__, sta->addr, link_id, link_sta);
+			mt76_link_dbg(&dev->mt76, &link->mt76, MT76_DBG_STA,
+				      "%s: WARNING: STA %pM link_id: %d could not find link_sta\n",
+				      __func__, sta->addr, link_id);
 			err = -EINVAL;
 			goto error_unlink;
 		}
 
 		mphy = mt76_vif_link_phy(&link->mt76);
 		if (!mphy) {
-			mt76_dbg(&dev->mt76, MT76_DBG_STA,
-				 "%s: WARNING: STA %pM link_id: %d could not find phy: %p\n",
-				 __func__, sta->addr, link_id, mphy);
+			mt76_link_dbg(&dev->mt76, &link->mt76, MT76_DBG_STA,
+				      "%s: WARNING: STA %pM link_id: %d could not find phy\n",
+				      __func__, sta->addr, link_id);
 			err = -EINVAL;
 			goto error_unlink;
 		}
@@ -1646,8 +1648,9 @@ static void mt7996_tx(struct ieee80211_hw *hw,
 			wcid = &msta_link->wcid;
 	}
 
-	mtk_dbg(&dev->mt76, TXV, "mt7996-tx, wcid: %p wcid->idx: %d skb: %p, call mt76_tx\n",
-		wcid, wcid->idx, skb);
+	mt76_vif_dbg(&dev->mt76, &mvif->mt76, MT76_DBG_TXV,
+		     "mt7996-tx, wcid: %p wcid->idx: %d skb: %p, call mt76_tx\n",
+		     wcid, wcid->idx, skb);
 
 	mt76_tx(mphy, control->sta, wcid, skb);
 unlock:
@@ -2929,6 +2932,7 @@ const struct ieee80211_ops mt7996_ops = {
 	CFG80211_TESTMODE_CMD(mt76_testmode_cmd)
 	CFG80211_TESTMODE_DUMP(mt76_testmode_dump)
 #ifdef CONFIG_MAC80211_DEBUGFS
+	.link_add_debugfs = mt7996_link_add_debugfs,
 	.sta_add_debugfs = mt7996_sta_add_debugfs,
 	.link_sta_add_debugfs = mt7996_link_sta_add_debugfs,
 #endif
