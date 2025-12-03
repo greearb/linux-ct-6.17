@@ -8,7 +8,7 @@
 #include "mt7915.h"
 #include "mcu.h"
 
-static u32 debug_lvl = MT76_DBG_FATAL | MT76_DBG_WRN;
+u32 debug_lvl = MT76_DBG_FATAL | MT76_DBG_WRN;
 module_param(debug_lvl, uint, 0644);
 MODULE_PARM_DESC(debug_lvl,
 		 "Enable debugging messages\n"

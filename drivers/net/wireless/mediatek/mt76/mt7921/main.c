@@ -17,7 +17,7 @@ bool mt7921_disable_deep_sleep;
 module_param_named(disable_deep_sleep, mt7921_disable_deep_sleep, bool, 0644);
 MODULE_PARM_DESC(disable_deep_sleep, "disable runtime deep-sleep");
 
-static u32 mt7921_debug_lvl = MT76_DBG_FATAL | MT76_DBG_WRN;
+u32 mt7921_debug_lvl = MT76_DBG_FATAL | MT76_DBG_WRN;
 module_param_named(debug_lvl, mt7921_debug_lvl, uint, 0644);
 MODULE_PARM_DESC(debug_lvl,
 		 "Enable debugging messages\n"

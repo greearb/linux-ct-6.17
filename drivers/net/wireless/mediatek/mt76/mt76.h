@@ -1303,14 +1303,16 @@ enum MTK_DEBUG {
 
 #define mtk_dbg(mt76, dbg_mask, fmt, ...)				\
 	do {								\
-		if (*(mt76)->debug_lvl & MT76_DBG_##dbg_mask)		\
+		if ((mt76)->debug_lvl &&				\
+		    *((mt76)->debug_lvl) & MT76_DBG_##dbg_mask)		\
 			dev_info((mt76)->dev, fmt, ##__VA_ARGS__);	\
 	} while (0)
 
 /* For compat with out-of-tree mtk patches */
 #define mt76_dbg(mt76, dbg_mask, fmt, ...)				\
 	do {								\
-		if (*(mt76)->debug_lvl & dbg_mask)			\
+		if ((mt76)->debug_lvl &&				\
+		    *((mt76)->debug_lvl) & dbg_mask)			\
 			dev_info((mt76)->dev, fmt, ##__VA_ARGS__);	\
 	} while (0)
 
@@ -2304,7 +2306,7 @@ mt76_vif_dbg(struct mt76_dev *dev, struct mt76_vif_data *mvif, u32 dbg_mask, con
 	char prefix_buf[128];
 	int wcid = -1;
 
-	if (!(*dev->debug_lvl & dbg_mask))
+	if (!dev->debug_lvl || !(*dev->debug_lvl & dbg_mask))
 		return;
 
 	if (mvif)
@@ -2343,7 +2345,7 @@ mt76_link_dbg(struct mt76_dev *dev, struct mt76_vif_link *mlink, u32 dbg_mask, c
 	char prefix_buf[128];
 	int wcid = -1;
 
-	if (!(*dev->debug_lvl & dbg_mask))
+	if (!dev->debug_lvl || !(*dev->debug_lvl & dbg_mask))
 		return;
 
 	if (mlink) {
@@ -2381,7 +2383,7 @@ mt76_wcid_dbg(struct mt76_dev *dev, struct mt76_wcid *wcid, u32 dbg_mask, const 
 {
 	char prefix_buf[128];
 
-	if (!(*dev->debug_lvl & dbg_mask))
+	if (!dev->debug_lvl || !(*dev->debug_lvl & dbg_mask))
 		return;
 
 	if (wcid) {
