@@ -704,10 +704,10 @@ static void ieee80211_add_link_sta_stats(u32 et_li, u32 mlo_link_id, struct link
 					 u32 active, struct station_info *sinfo,
 					 struct ieee80211_ethtool_data_sta_stats *data)
 {
-	struct station_info_link *linfo = find_sinfo_link(mlo_link_id, sinfo);
+	struct link_station_info *linfo = sinfo->links[mlo_link_id];
 
 	if (linfo)
-		data->link_stats[et_li].link_id = linfo->link_id; // else it stays zero
+		data->link_stats[et_li].link_id = mlo_link_id; // else it stays zero
 	data->link_stats[et_li].rx_packets += link_rx_stats->packets;
 	data->link_stats[et_li].rx_bytes += link_rx_stats->bytes;
 	data->link_stats[et_li].rx_duplicates += link_rx_stats->num_duplicates;
@@ -841,7 +841,7 @@ static void ieee80211_get_stats2(struct net_device *dev,
 			data->link_stats[li].sta_state = sta->sta_state;
 
 			if (mld) {
-				struct station_info_link *linfo = find_sinfo_link(li, &sinfo);
+				struct link_station_info *linfo = sinfo.links[li];
 				struct rate_info txrxrate;
 				int mn;
 				u64 accum;
