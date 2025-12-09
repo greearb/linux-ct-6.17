@@ -678,24 +678,6 @@ do_survey:
 }
 #endif
 
-/* Find station-link-info in sinfo that matches requested
- * link index.  Return NULL if nothing found.
- */
-static struct station_info_link *
-find_sinfo_link(u32 li, struct station_info *sinfo)
-{
-	struct station_info_link *linfo = NULL;
-	int i;
-
-	for (i = 0; i<IEEE80211_MAX_STA_INFO_LINK; i++) {
-		if (sinfo->link_info[i].filled && sinfo->link_info[i].link_id == li) {
-			linfo = &(sinfo->link_info[i]);
-			break;
-		}
-	}
-	return linfo;
-}
-
 /* mlo_link_id is link identifier
  * et_li is ethtool link data index
  */

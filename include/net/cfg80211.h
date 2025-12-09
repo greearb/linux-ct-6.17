@@ -2062,29 +2062,6 @@ struct cfg80211_tid_stats {
 	struct cfg80211_txq_stats txq_stats;
 };
 
-#define IEEE80211_MAX_STA_INFO_LINK 4
-/**
- * struct station_info_link -- Link info
- *
- * Same definitions as in station_info, but for links.
- */
-struct station_info_link {
-	u64 filled;
-	u64 rx_bytes;
-	u64 tx_bytes;
-	struct rate_info txrate;
-
-	u32 rx_packets;
-	u32 tx_packets;
-	u32 tx_retries;
-	u32 tx_failed;
-
-	s8 rx_beacon_signal_avg;
-	s8 ack_signal;
-	s8 avg_ack_signal;
-	u8 link_id;
-};
-
 #define IEEE80211_MAX_CHAINS	4
 
 /**
@@ -2333,9 +2310,6 @@ struct station_info {
 	u8 mld_addr[ETH_ALEN] __aligned(2);
 	const u8 *assoc_resp_ies;
 	size_t assoc_resp_ies_len;
-
-	/* TODO:  Consolidate with the logic below that came in from upstream. */
-	struct station_info_link link_info[IEEE80211_MAX_STA_INFO_LINK];
 
 	u16 valid_links;
 	struct link_station_info *links[IEEE80211_MLD_MAX_NUM_LINKS];
