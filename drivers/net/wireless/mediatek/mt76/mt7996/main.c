@@ -2042,7 +2042,7 @@ static void mt7996_link_sta_statistics(struct ieee80211_hw *hw,
 	struct rate_info *txrate;
 	u8 link_id = link_sta->link_id;
 
-	if (link_id >= IEEE80211_MAX_STA_INFO_LINK)
+	if (link_id >= IEEE80211_MLD_MAX_NUM_LINKS)
 		return;
 
 	mutex_lock(&dev->mt76.mutex);
