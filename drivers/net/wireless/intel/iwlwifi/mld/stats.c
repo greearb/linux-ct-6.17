@@ -360,17 +360,13 @@ void iwl_mld_mac80211_link_sta_statistics(struct ieee80211_hw *hw,
 					  struct ieee80211_link_sta *link_sta,
 					  struct link_station_info *link_sinfo)
 {
-	struct ieee80211_sta *sta = link_sta->sta;
-	struct iwl_mld_sta *mld_sta = iwl_mld_sta_from_mac80211(sta);
-	struct ieee80211_bss_conf *link;
+	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
 	struct iwl_mld_link *mld_link;
+	int link_id = vif->active_links ? __ffs(vif->active_links) : 0;
 
-	link = link_conf_dereference_check(mld_sta->vif,
-					   link_sta->link_id);
+	mld_link = iwl_mld_link_dereference_check(mld_vif, link_id);
 
-	mld_link = iwl_mld_link_from_mac80211(link);
-
-	if (WARN_ON(!link || !mld_link))
+	if (WARN_ON(!mld_link))
 		return;
 
 	link_sinfo->rx_beacon_signal_avg =
