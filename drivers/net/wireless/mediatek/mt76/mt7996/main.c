@@ -164,10 +164,16 @@ static void mt7996_stop(struct ieee80211_hw *hw, bool suspend)
 	cancel_delayed_work_sync(&dev->scs_work);
 }
 
-static bool
-mt7996_has_repeater_stations(struct mt7996_phy *phy)
+static int
+mt7996_num_repeater_links(struct mt7996_phy *phy)
 {
-	return !!(phy->omac_mask & GENMASK_ULL(REPEATER_BSSID_MAX, REPEATER_BSSID_START));
+	return hweight64(phy->omac_mask & GENMASK_ULL(REPEATER_BSSID_MAX, REPEATER_BSSID_START));
+}
+
+static bool
+mt7996_has_repeater_links(struct mt7996_phy *phy)
+{
+	return mt7996_num_repeater_links(phy) > 0;
 }
 
 static inline int get_free_idx(u64 mask, u8 start, u8 end)
@@ -579,12 +585,13 @@ void mt7996_vif_link_remove(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	mt7996_mcu_add_bss_info(phy, vif, link_conf, mlink, msta_link, false);
 
 	/* If we need to, transition this wlan into the master for repeater stations. */
-	if (mlink->omac_idx == MT7996_MASTER_OMAC_IDX && mt7996_has_repeater_stations(phy)) {
+	if (mlink->omac_idx == MT7996_MASTER_OMAC_IDX && mt7996_has_repeater_links(phy)) {
 		mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS, "%s: Transitioning to master omac\n",
 			      __func__);
 		__mt7996_configure_master_omac(phy, true);
 	} else {
-		if (mlink->omac_idx >= REPEATER_BSSID_START && !mt7996_has_repeater_stations(phy)) {
+		if (mlink->omac_idx >= REPEATER_BSSID_START &&
+		    mt7996_num_repeater_links(phy) <= 1) {
 			mt76_link_dbg(&dev->mt76, mlink, MT76_DBG_BSS,
 				      "%s: Last repeater link removed\n", __func__);
 			mt7996_configure_master_omac(phy, false);
