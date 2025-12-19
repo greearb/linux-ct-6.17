@@ -425,11 +425,8 @@ struct mt7996_phy {
 	u32 throttle_temp[2]; /* 0: critical high, 1: maximum */
 
 	bool monitor_enabled;
-	u32 mac80211_rxfilter_flags;
-	struct {
-		u32 cr;
-		u32 cr1;
-	} rxfilter; /* Rx filter control registers */
+	unsigned int filter_flags;
+
 	u64 omac_mask;
 
 	u16 noise;

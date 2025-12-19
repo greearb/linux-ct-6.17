@@ -639,65 +639,52 @@ void mt7996_vif_link_remove(struct mt76_phy *mphy, struct ieee80211_vif *vif,
 	mt76_wcid_cleanup(&dev->mt76, &msta_link->wcid);
 }
 
-static void mt7996_phy_set_rxfilter(struct mt7996_phy *phy)
+static unsigned int mt7996_phy_set_rxfilter_flags(struct mt7996_phy *phy, u32 conf_flags)
 {
 	struct mt7996_dev *dev = phy->dev;
-	u32 supported_flags = 0;
-
-	/* Initially reset the filter */
-	phy->rxfilter.cr = 0;
-	phy->rxfilter.cr1 = 0;
-
-	/* The following HW flags should never be set here:
-	 * MT_WF_RFCR_DROP_OTHER_BSS
-	 * MT_WF_RFCR_DROP_OTHER_BEACON
-	 * MT_WF_RFCR_DROP_FRAME_REPORT
-	 * MT_WF_RFCR_DROP_PROBEREQ
-	 * MT_WF_RFCR_DROP_MCAST_FILTERED
-	 * MT_WF_RFCR_DROP_MCAST
-	 * MT_WF_RFCR_DROP_BCAST
-	 * MT_WF_RFCR_DROP_DUPLICATE
-	 * MT_WF_RFCR_DROP_A2_BSSID
-	 * MT_WF_RFCR_DROP_UNWANTED_CTL
-	 * MT_WF_RFCR_DROP_STBC_MULTI
-	 */
+	u32 supported_flags = 0, cr = 0, cr1 = 0;
 
 	/* Upstream driver configures DROP_A3_MAC for this case. However, this seems to have issues
 	 * with filtering broadcast frames, and makes ARP fail when sent from the same radio.
 	 */
 	supported_flags |= FIF_OTHER_BSS;
-	if (!(phy->mac80211_rxfilter_flags & FIF_OTHER_BSS))
-		phy->rxfilter.cr |= MT_WF_RFCR_DROP_OTHER_TIM |
-				    MT_WF_RFCR_DROP_A3_BSSID;
+	if (!(conf_flags & FIF_OTHER_BSS))
+		cr |= MT_WF_RFCR_DROP_OTHER_TIM |
+		      MT_WF_RFCR_DROP_A3_BSSID;
 
 	supported_flags |= FIF_FCSFAIL;
-	if (!(phy->mac80211_rxfilter_flags & FIF_FCSFAIL))
-		phy->rxfilter.cr |= MT_WF_RFCR_DROP_FCSFAIL;
+	if (!(conf_flags & FIF_FCSFAIL))
+		cr |= MT_WF_RFCR_DROP_FCSFAIL;
 
 	supported_flags |= FIF_CONTROL;
-	if (!(phy->mac80211_rxfilter_flags & FIF_CONTROL))
-		phy->rxfilter.cr |= MT_WF_RFCR_DROP_CTS |
-				    MT_WF_RFCR_DROP_RTS |
-				    MT_WF_RFCR_DROP_CTL_RSV;
+	if (!(conf_flags & FIF_CONTROL))
+		cr |= MT_WF_RFCR_DROP_CTS |
+		      MT_WF_RFCR_DROP_RTS |
+		      MT_WF_RFCR_DROP_CTL_RSV;
 
 	if (!phy->monitor_enabled)
-		phy->rxfilter.cr |= MT_WF_RFCR_DROP_CTS |
-				    MT_WF_RFCR_DROP_RTS |
-				    MT_WF_RFCR_DROP_CTL_RSV |
-				    MT_WF_RFCR_DROP_FCSFAIL |
-				    MT_WF_RFCR_DROP_OTHER_UC;
+		cr |= MT_WF_RFCR_DROP_CTS |
+		      MT_WF_RFCR_DROP_RTS |
+		      MT_WF_RFCR_DROP_CTL_RSV |
+		      MT_WF_RFCR_DROP_FCSFAIL |
+		      MT_WF_RFCR_DROP_OTHER_UC;
 
-	if (!((phy->mac80211_rxfilter_flags & FIF_CONTROL) || phy->monitor_enabled))
-		phy->rxfilter.cr1 |= MT_WF_RFCR1_DROP_ACK |
-				     MT_WF_RFCR1_DROP_BF_POLL |
-				     MT_WF_RFCR1_DROP_BA |
-				     MT_WF_RFCR1_DROP_CFEND |
-				     MT_WF_RFCR1_DROP_CFACK;
+	if (!(conf_flags & FIF_CONTROL) && !phy->monitor_enabled)
+		cr1 |= MT_WF_RFCR1_DROP_ACK |
+		       MT_WF_RFCR1_DROP_BF_POLL |
+		       MT_WF_RFCR1_DROP_BA |
+		       MT_WF_RFCR1_DROP_CFEND |
+		       MT_WF_RFCR1_DROP_CFACK;
 
-	phy->mac80211_rxfilter_flags &= supported_flags;
+	mt76_wr(dev, MT_WF_RFCR(phy->mt76->band_idx), cr);
+	mt76_wr(dev, MT_WF_RFCR1(phy->mt76->band_idx), cr1);
 
-	mt76_wr(dev, MT_WF_RFCR(phy->mt76->band_idx), phy->rxfilter.cr);
-	mt76_wr(dev, MT_WF_RFCR1(phy->mt76->band_idx), phy->rxfilter.cr1);
+	return conf_flags & supported_flags;
+}
+
+static void mt7996_phy_set_rxfilter(struct mt7996_phy *phy)
+{
+	mt7996_phy_set_rxfilter_flags(phy, phy->filter_flags);
 }
 
 static void mt7996_set_monitor(struct mt7996_phy *phy, bool enabled)
@@ -942,17 +929,13 @@ static void mt7996_configure_filter(struct ieee80211_hw *hw,
 {
 	struct mt7996_dev *dev = mt7996_hw_dev(hw);
 	struct mt7996_phy *phy;
-	u32 flags = 0;
 
 	mutex_lock(&dev->mt76.mutex);
 
-	mt7996_for_each_phy(dev, phy) {
-		phy->mac80211_rxfilter_flags = *total_flags;
-		mt7996_phy_set_rxfilter(phy);
-		flags |= phy->mac80211_rxfilter_flags;
-	}
+	mt7996_for_each_phy(dev, phy)
+		phy->filter_flags = mt7996_phy_set_rxfilter_flags(phy, *total_flags);
 
-	*total_flags = flags;
+	*total_flags = dev->phy.filter_flags;
 
 	mutex_unlock(&dev->mt76.mutex);
 }

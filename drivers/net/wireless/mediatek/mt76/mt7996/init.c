@@ -436,7 +436,8 @@ mt7996_init_wiphy_band(struct ieee80211_hw *hw, struct mt7996_phy *phy)
 
 	phy->slottime = 9;
 	phy->beacon_rate = -1;
-	phy->mac80211_rxfilter_flags = MT_WF_RFCR_DROP_OTHER_UC;
+	phy->monitor_enabled = false;
+	phy->filter_flags = 0;
 
 	if (phy->mt76->cap.has_2ghz) {
 		phy->mt76->sband_2g.sband.ht_cap.cap |=
