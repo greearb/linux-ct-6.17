@@ -507,8 +507,15 @@ void iwl_mld_remove_link(struct iwl_mld *mld,
 	bool is_deflink = link == &mld_vif->deflink;
 	u8 fw_id;
 
-	if (WARN_ON(!link || link->active))
+	if (WARN_ON_ONCE(!link)) {
+		IWL_ERR(mld, "Attempted to remove nonexistent link.\n");
 		return;
+	}
+
+	if (WARN_ON_ONCE(link->active)) {
+		IWL_ERR(mld, "Attempted to remove active link.\n");
+		return;
+	}
 
 	fw_id  = link->fw_id;
 
