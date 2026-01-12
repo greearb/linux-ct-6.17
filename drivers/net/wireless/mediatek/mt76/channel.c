@@ -170,7 +170,19 @@ void mt76_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	struct mt76_vif_data *mvif = mlink->mvif;
 	int link_id = link_conf->link_id;
 	struct mt76_phy *phy = ctx->phy;
-	struct mt76_dev *dev = phy->dev;
+	struct mt76_dev *dev;
+
+	if (!phy) {
+		/* Looks like we might be able to hit this case after we've
+		 * created a channel context before mt76 has configured it, and
+		 * now we're unassigning it */
+		mt76_dbg(dev, MT76_DBG_WRN,
+			 "%s, mt76_chanctx missing phy assignment\n",
+			 __func__);
+		return;
+	}
+
+	dev = phy->dev;
 
 	mt76_dbg(dev, MT76_DBG_CHAN, "%s, remove link %u from %d MHz\n",
 		 __func__, link_id, conf->def.chan->center_freq);
