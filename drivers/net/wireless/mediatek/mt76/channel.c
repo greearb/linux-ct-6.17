@@ -176,9 +176,8 @@ void mt76_unassign_vif_chanctx(struct ieee80211_hw *hw,
 		/* Looks like we might be able to hit this case after we've
 		 * created a channel context before mt76 has configured it, and
 		 * now we're unassigning it */
-		mt76_dbg(dev, MT76_DBG_WRN,
-			 "%s, mt76_chanctx missing phy assignment\n",
-			 __func__);
+		pr_warn("%s, mt76_chanctx missing phy assignment\n",
+			__func__);
 		return;
 	}
 
