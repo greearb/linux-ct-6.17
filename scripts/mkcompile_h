@@ -6,7 +6,8 @@ CC_VERSION="$2"
 LD=$3
 
 scm_version() {
-	head=$(git rev-parse --verify HEAD 2>/dev/null)
+	srctree="$(dirname "$0")/.."
+	head=$(git -C "$srctree" rev-parse --verify HEAD 2>/dev/null)
 	printf 'g%.12s' "$head"
 }
 
