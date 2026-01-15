@@ -116,6 +116,19 @@ void mt76_scan_work(struct work_struct *work)
 	bool beacon_rx;
 	int i;
 
+	/* The scan_request really shouldn't be NULL, but here we are... */
+	if (WARN_ON_ONCE(!req)) {
+		struct ieee80211_channel *ch = dev->scan.chan;
+		mt76_dbg(dev, MT76_DBG_WRN,
+			 "%s: attemtping to scan with a NULL scan_request!\n"
+			 "ch_ptr: %p, vif_ptr: %p, vif_link_ptr: %p, phy_ptr: %p, chan_idx: %d\n"
+			 "ch->band: %u, ch->center: %u, ch->flags: 0x%x\n",
+			 __func__, ch, dev->scan.vif, dev->scan.mlink, phy, dev->scan.chan_idx,
+			 ch ? ch->band : 0xff, ch ? ch->center_freq : 0,
+			 ch ? ch->flags : 0);
+		return;
+	}
+
 	beacon_rx = dev->scan.beacon_wait && dev->scan.beacon_received;
 	dev->scan.beacon_wait = false;
 
