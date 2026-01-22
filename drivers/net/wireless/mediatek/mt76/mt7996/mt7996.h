@@ -728,12 +728,10 @@ mt7996_vif_link(struct mt7996_dev *dev, struct ieee80211_vif *vif, int link_id)
 static inline struct mt7996_phy *
 mt7996_vif_link_phy(struct mt7996_vif_link *link)
 {
-	struct mt76_phy *mphy = mt76_vif_link_phy(&link->mt76);
-
-	if (!mphy)
+	if (!link)
 		return NULL;
 
-	return mphy->priv;
+	return link->phy;
 }
 
 static inline struct mt7996_dev *
