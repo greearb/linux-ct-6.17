@@ -1857,6 +1857,8 @@ next:
 				continue;
 			}
 
+			WARN_ON_ONCE(time_is_before_jiffies(txwi->jiffies + HZ));
+
 			mtk_dbg(mdev, TXV, "mt7996-mac-tx-free, msdu: %d, tx-cnt: %d  t_status: %d count: %d/%d\n",
 				msdu, tx_retries + 1, tx_status, count, total);
 
