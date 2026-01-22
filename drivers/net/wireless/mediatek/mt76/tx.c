@@ -5,6 +5,11 @@
 
 #include "mt76.h"
 
+static unsigned long tx_wait_thresh_ms = 100;
+module_param_named(tx_wait_thresh_ms, tx_wait_thresh_ms, ulong, 0644);
+MODULE_PARM_DESC(tx_wait_thresh_ms, "Time to wait for TXFREE before flushing the tx queue.\n"
+				    "0 to disable this behavior.");
+
 static int
 mt76_txq_get_qid(struct ieee80211_txq *txq)
 {
@@ -956,8 +961,14 @@ int mt76_token_consume(struct mt76_dev *dev, struct mt76_txwi_cache **ptxwi)
 	spin_lock_bh(&dev->token_lock);
 
 	token = idr_alloc(&dev->token, *ptxwi, 0, dev->token_size, GFP_ATOMIC);
-	if (token >= 0)
+	if (token >= 0) {
 		dev->token_count++;
+
+		list_add(&(*ptxwi)->list, dev->token_queue_tail);
+		dev->token_queue_tail = &(*ptxwi)->list;
+
+		(*ptxwi)->jiffies = jiffies;
+	}
 
 #ifdef CONFIG_NET_MEDIATEK_SOC_WED
 	if (mtk_wed_device_active(&dev->mmio.wed) &&
@@ -995,13 +1006,17 @@ EXPORT_SYMBOL_GPL(mt76_rx_token_consume);
 struct mt76_txwi_cache *
 mt76_token_release(struct mt76_dev *dev, int token, bool *wake)
 {
-	struct mt76_txwi_cache *txwi;
+	struct mt76_txwi_cache *txwi, *oldest_txwi;
 
 	spin_lock_bh(&dev->token_lock);
 
 	txwi = idr_remove(&dev->token, token);
 	if (txwi) {
 		dev->token_count--;
+
+		if (dev->token_queue_tail == &txwi->list)
+			dev->token_queue_tail = txwi->list.prev;
+		list_del(&txwi->list);
 
 #ifdef CONFIG_NET_MEDIATEK_SOC_WED
 		if (mtk_wed_device_active(&dev->mmio.wed) &&
@@ -1011,9 +1026,19 @@ mt76_token_release(struct mt76_dev *dev, int token, bool *wake)
 #endif
 	}
 
-	if (wake && dev->token_count < dev->token_size - MT76_TOKEN_FREE_THR &&
-	    dev->phy.q_tx[0]->blocked)
+	oldest_txwi = list_first_entry_or_null(&dev->token_queue, struct mt76_txwi_cache, list);
+
+	if (tx_wait_thresh_ms && oldest_txwi &&
+	    time_is_before_jiffies(oldest_txwi->jiffies + (HZ * tx_wait_thresh_ms / 1000))) {
+		if (!dev->phy.q_tx[0]->blocked)
+			mt76_dbg(dev, MT76_DBG_TXV,
+				 "Tx queue blocked, clearing before allowing more transmits.");
+		__mt76_set_tx_blocked(dev, true);
+	} else if (wake && dev->token_count < dev->token_size - MT76_TOKEN_FREE_THR &&
+		   dev->phy.q_tx[0]->blocked && !*wake) {
+		mt76_dbg(dev, MT76_DBG_TXV, "Restarting previously blocked queue.");
 		*wake = true;
+	}
 
 	spin_unlock_bh(&dev->token_lock);
 
