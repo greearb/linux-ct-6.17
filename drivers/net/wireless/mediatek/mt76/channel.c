@@ -66,8 +66,19 @@ void mt76_remove_chanctx(struct ieee80211_hw *hw,
 	struct mt76_dev *dev = phy->dev;
 
 	phy = ctx->phy;
-	if (WARN_ON_ONCE(!phy))
-		return;
+	if (!phy) {
+		mt76_dbg(dev, MT76_DBG_WRN,
+			 "%s: attempting to fix NULL phy in mt76_chanctx, band: %u, center: %u bw: %u\n",
+			 __func__, conf->def.chan->band,
+			 conf->def.chan->center_freq, conf->def.width);
+		/* The mt76_chanctx doesn't have a properly configured phy,
+		 * but we should be able to get the right one still
+		 */
+		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+
+		if (WARN_ON_ONCE(!phy))
+			return;
+	}
 
 	mt76_dbg(dev, MT76_DBG_CHAN, "%s: remove %u\n",
 		 __func__, conf->def.chan->hw_value);
@@ -87,8 +98,23 @@ void mt76_change_chanctx(struct ieee80211_hw *hw,
 			 u32 changed)
 {
 	struct mt76_chanctx *ctx = (struct mt76_chanctx *)conf->drv_priv;
-	struct mt76_phy *phy = ctx->phy;
+	struct mt76_phy *phy = hw->priv;
 	struct mt76_dev *dev = phy->dev;
+
+	phy = ctx->phy;
+	if (!phy) {
+		mt76_dbg(dev, MT76_DBG_WRN,
+			 "%s: attempting to fix NULL phy in mt76_chanctx, band: %u, center: %u bw: %u\n",
+			 __func__, conf->def.chan->band,
+			 conf->def.chan->center_freq, conf->def.width);
+		/* The mt76_chanctx doesn't have a properly configured phy,
+		 * but we should be able to get the right one still
+		 */
+		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+
+		if (WARN_ON_ONCE(!phy))
+			return;
+	}
 
 	if (!(changed & (IEEE80211_CHANCTX_CHANGE_WIDTH |
 			 IEEE80211_CHANCTX_CHANGE_RADAR)))
@@ -115,10 +141,26 @@ int mt76_assign_vif_chanctx(struct ieee80211_hw *hw,
 	struct mt76_vif_link *mlink = (struct mt76_vif_link *)vif->drv_priv;
 	struct mt76_vif_data *mvif = mlink->mvif;
 	int link_id = link_conf->link_id;
-	struct mt76_phy *phy = ctx->phy;
+	struct mt76_phy *phy = hw->priv;
 	struct mt76_dev *dev = phy->dev;
 	bool mlink_alloc = false;
 	int ret = 0;
+
+	phy = ctx->phy;
+	if (!phy) {
+		struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
+		mt76_dbg(dev, MT76_DBG_WRN,
+			 "%s: %s: attempting to fix NULL phy in mt76_chanctx, band: %u, center: %u bw: %u\n",
+			 wdev->netdev->name, __func__, conf->def.chan->band,
+			 conf->def.chan->center_freq, conf->def.width);
+		/* The mt76_chanctx doesn't have a properly configured phy,
+		 * but we should be able to get the right one still
+		 */
+		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+
+		if (WARN_ON_ONCE(!phy))
+			return -EINVAL;
+	}
 
 	mt76_dbg(dev, MT76_DBG_CHAN, "%s: assign link_id %u to %d MHz\n",
 		 __func__, link_id, conf->def.chan->center_freq);
@@ -169,8 +211,24 @@ void mt76_unassign_vif_chanctx(struct ieee80211_hw *hw,
 	struct mt76_vif_link *mlink = (struct mt76_vif_link *)vif->drv_priv;
 	struct mt76_vif_data *mvif = mlink->mvif;
 	int link_id = link_conf->link_id;
-	struct mt76_phy *phy = ctx->phy;
+	struct mt76_phy *phy = hw->priv;
 	struct mt76_dev *dev = phy->dev;
+
+	phy = ctx->phy;
+	if (!phy) {
+		struct wireless_dev *wdev = ieee80211_vif_to_wdev(vif);
+		mt76_dbg(dev, MT76_DBG_WRN,
+			 "%s: %s: attempting to fix NULL phy in mt76_chanctx, band: %u, center: %u bw: %u\n",
+			 wdev->netdev->name, __func__, conf->def.chan->band,
+			 conf->def.chan->center_freq, conf->def.width);
+		/* The mt76_chanctx doesn't have a properly configured phy,
+		 * but we should be able to get the right one still
+		 */
+		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+
+		if (WARN_ON_ONCE(!phy))
+			return;
+	}
 
 	mt76_dbg(dev, MT76_DBG_CHAN, "%s, remove link %u from %d MHz\n",
 		 __func__, link_id, conf->def.chan->center_freq);
