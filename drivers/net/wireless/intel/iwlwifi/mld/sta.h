@@ -152,6 +152,10 @@ struct iwl_mld_sta {
 static inline struct iwl_mld_sta *
 iwl_mld_sta_from_mac80211(struct ieee80211_sta *sta)
 {
+	if (WARN_ON(((unsigned long)(sta)) < 8000)) {
+		pr_err("mld-sta-from-mac80211, bogus sta: 0x%px\n", sta);
+		return NULL;
+	}
 	return (void *)sta->drv_priv;
 }
 
