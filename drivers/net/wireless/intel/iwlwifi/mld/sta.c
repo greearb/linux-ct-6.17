@@ -868,18 +868,31 @@ static void iwl_mld_count_mpdu(struct ieee80211_link_sta *link_sta, int queue,
 	struct iwl_mld *mld;
 	int total_mpdus = 0;
 
-	if (WARN_ON(!link_sta))
+	if (WARN_ON(((unsigned long)(link_sta)) < 8000)) {
+		pr_err("mld-count-mpdu, bogus link-sta: 0x%px\n", link_sta);
 		return;
+	}
 
 	mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
+	if (WARN_ON(((unsigned long)(mld_sta)) < 8000)) {
+		pr_err("mld-count-mpdu, bogus mld-sta: 0x%px\n", mld_sta);
+		return;
+	}
+
 	if (!mld_sta->mpdu_counters)
 		return;
 
 	mld_vif = iwl_mld_vif_from_mac80211(mld_sta->vif);
+	if (WARN_ON(((unsigned long)(mld_vif)) < 8000)) {
+		pr_err("mld-count-mpdu, bogus mld-vif: 0x%px\n", mld_vif);
+		return;
+	}
 	mld_link = iwl_mld_link_dereference_check(mld_vif, link_sta->link_id);
 
-	if (WARN_ON_ONCE(!mld_link))
+	if (WARN_ON_ONCE(((unsigned long)(mld_link)) < 8000)) {
+		pr_err("mld-count-mpdu, bogus mld-link: 0x%px\n", mld_link);
 		return;
+	}
 
 	queue_counter = &mld_sta->mpdu_counters[queue];
 
