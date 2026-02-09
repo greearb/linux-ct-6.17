@@ -2721,6 +2721,8 @@ void mt7996_tx_token_put(struct mt7996_dev *dev)
 		mt7996_txwi_free(dev, txwi, NULL, NULL, NULL, 0, 1);
 		dev->mt76.token_count--;
 	}
+	INIT_LIST_HEAD(&dev->mt76.token_queue);
+	dev->mt76.token_queue_tail = &dev->mt76.token_queue;
 	spin_unlock_bh(&dev->mt76.token_lock);
 	idr_destroy(&dev->mt76.token);
 }
