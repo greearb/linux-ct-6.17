@@ -2411,16 +2411,15 @@ mt7996_mcu_sta_hdrt_tlv(struct mt7996_dev *dev, struct sk_buff *skb)
 }
 
 static void
-mt7996_mcu_starec_muar_idx_tlv(struct sk_buff *skb, struct ieee80211_vif *vif)
+mt7996_mcu_starec_muar_idx_tlv(struct sk_buff *skb, struct mt7996_vif_link *link)
 {
 	struct sta_rec_muar_idx *muar;
-	struct mt7996_vif *mvif = (struct mt7996_vif *)vif->drv_priv;
 	struct tlv *tlv;
 
 	tlv = mt76_connac_mcu_add_tlv(skb, STA_REC_MUAR_IDX, sizeof(*muar));
 
 	muar = (struct sta_rec_muar_idx *)tlv;
-	muar->muar_idx = mvif->deflink.mt76.omac_idx;
+	muar->muar_idx = link->mt76.omac_idx;
 }
 
 static void
@@ -3039,9 +3038,8 @@ int mt7996_mcu_add_sta(struct mt7996_dev *dev,
 		mt7996_mcu_sta_eht_tlv(skb, link_sta, dev);
 		/* starec muru */
 		mt7996_mcu_sta_muru_tlv(dev, skb, link_conf, link_sta);
-
 		/* starec muar idx*/
-		mt7996_mcu_starec_muar_idx_tlv(skb, link_conf->vif);
+		mt7996_mcu_starec_muar_idx_tlv(skb, link);
 
 		if (sta->mlo) {
 			mt7996_mcu_sta_mld_setup_tlv(dev, skb, link_conf->vif,
