@@ -599,6 +599,12 @@ iwl_mld_free_skb(struct iwl_op_mode *op_mode, struct sk_buff *skb)
 	struct iwl_mld *mld = IWL_OP_MODE_GET_MLD(op_mode);
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 
+	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+		pr_err("iwl-mld-free-skb skb free-status: 0x%x != 0x%x (allocated)\n",
+		       skb->free_status, SKB_ALREADY_ALLOCATED);
+		return;
+	}
+
 	iwl_trans_free_tx_cmd(mld->trans, info->driver_data[1]);
 	ieee80211_free_txskb(mld->hw, skb);
 }

@@ -1033,6 +1033,10 @@ struct sk_buff {
 #if defined(CONFIG_NET_SCHED) || defined(CONFIG_NET_XGRESS)
 	__u16			tc_index;	/* traffic control index */
 #endif
+	/* 0x86 means we have freed this skb and should not be using it.  0x97 means in use. */
+#define SKB_ALREADY_FREED     0x86
+#define SKB_ALREADY_ALLOCATED 0x97
+	__u8			free_status;
 
 	u16			alloc_cpu;
 
