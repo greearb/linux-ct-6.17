@@ -24,6 +24,12 @@ int iwl_tx_tso_segment(struct sk_buff *skb, unsigned int num_subframes,
 	bool qos = ieee80211_is_data_qos(hdr->frame_control);
 	u16 ip_base_id = ipv4 ? ntohs(ip_hdr(skb)->id) : 0;
 
+	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+		pr_err("iwl-tx-tso-segment skb free-status: 0x%x != 0x%x\n",
+		       skb->free_status, SKB_ALREADY_ALLOCATED);
+		return -ENOMEM; /* more like -E_USE_AFTER_FREE */
+	}
+
 	skb_shinfo(skb)->gso_size = num_subframes * mss;
 	memcpy(cb, skb->cb, sizeof(cb));
 

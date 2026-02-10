@@ -732,6 +732,12 @@ int iwl_txq_gen2_tx(struct iwl_trans *trans, struct sk_buff *skb,
 		      "TX on unused queue %d\n", txq_id))
 		return -EINVAL;
 
+	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+		pr_err("iwl-txq-gen2-tx freed skb free-status: 0x%x != 0x%x\n",
+		       skb->free_status, SKB_ALREADY_ALLOCATED);
+		return -ENOMEM; /* more like -E_USE_AFTER_FREE */
+	}
+
 	if (skb_is_nonlinear(skb) &&
 	    skb_shinfo(skb)->nr_frags > IWL_TRANS_PCIE_MAX_FRAGS(trans_pcie) &&
 	    __skb_linearize(skb))
