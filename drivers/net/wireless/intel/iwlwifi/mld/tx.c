@@ -1509,6 +1509,12 @@ static void iwl_mld_tx_reclaim_txq(struct iwl_mld *mld, int txq, int index,
 
 		iwl_trans_free_tx_cmd(mld->trans, info->driver_data[1]);
 
+		if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+			pr_err("iwl-tx-reclaim-txq skb free-status: 0x%x != 0x%x\n",
+			       skb->free_status, SKB_ALREADY_ALLOCATED);
+			continue;
+		}
+
 		memset(&info->status, 0, sizeof(info->status));
 
 		/* Packet was transmitted successfully, failures come as single
