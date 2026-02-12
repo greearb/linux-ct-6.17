@@ -296,7 +296,7 @@ struct mt7996_mcu_background_chain_ctrl {
 	u8 rsv[2];
 } __packed;
 
-struct mt7996_mcu_eeprom {
+struct mt7996_mcu_eeprom_update {
 	u8 _rsv[4];
 
 	__le16 tag;
@@ -306,6 +306,14 @@ struct mt7996_mcu_eeprom {
 	__le16 buf_len;
 } __packed;
 
+union eeprom_data {
+	struct {
+		__le32 data_len;
+		DECLARE_FLEX_ARRAY(u8, data);
+	} ext_eeprom;
+	DECLARE_FLEX_ARRAY(u8, efuse);
+} __packed;
+
 struct mt7996_mcu_eeprom_info {
 	u8 _rsv[4];
 
@@ -313,7 +321,26 @@ struct mt7996_mcu_eeprom_info {
 	__le16 len;
 	__le32 addr;
 	__le32 valid;
-	u8 data[MT7996_EEPROM_BLOCK_SIZE];
+} __packed;
+
+struct mt7996_mcu_eeprom_access {
+	struct mt7996_mcu_eeprom_info info;
+	union eeprom_data eeprom;
+} __packed;
+
+struct mt7996_mcu_eeprom_access_event {
+	u8 _rsv[4];
+
+	__le16 tag;
+	__le16 len;
+	__le32 version;
+	__le32 addr;
+	__le32 valid;
+	__le32 size;
+	__le32 magic_no;
+	__le32 type;
+	__le32 rsv[4];
+	union eeprom_data eeprom;
 } __packed;
 
 struct mt7996_mcu_phy_rx_info {
@@ -1065,6 +1092,10 @@ enum {
 	UNI_EFUSE_BUFFER_MODE,
 	UNI_EFUSE_FREE_BLOCK,
 	UNI_EFUSE_BUFFER_RD,
+};
+
+enum {
+	UNI_EXT_EEPROM_ACCESS = 1,
 };
 
 enum {
