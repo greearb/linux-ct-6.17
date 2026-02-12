@@ -1463,6 +1463,13 @@ static int __tcp_transmit_skb(struct sock *sk, struct sk_buff *skb,
 	int err;
 
 	BUG_ON(!skb || !tcp_skb_pcount(skb));
+
+	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+		pr_err("tcp-transmit-skb free-status: 0x%x != 0x%x\n",
+		       skb->free_status, SKB_ALREADY_ALLOCATED);
+		return -EINVAL;
+	}
+
 	tp = tcp_sk(sk);
 	prior_wstamp = tp->tcp_wstamp_ns;
 	tp->tcp_wstamp_ns = max(tp->tcp_wstamp_ns, tp->tcp_clock_cache);
