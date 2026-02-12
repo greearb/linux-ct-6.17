@@ -1635,6 +1635,12 @@ static bool tcp_shifted_skb(struct sock *sk, struct sk_buff *prev,
 	u32 start_seq = TCP_SKB_CB(skb)->seq;	/* start of newly-SACKed */
 	u32 end_seq = start_seq + shifted;	/* end of newly-SACKed */
 
+	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+		pr_err("tcp-shifted-skb skb free-status: 0x%x != 0x%x\n",
+		       skb->free_status, SKB_ALREADY_ALLOCATED);
+		return false;
+	}
+
 	BUG_ON(!pcount);
 
 	/* Adjust counters and hints for the newly sacked sequence
