@@ -328,6 +328,12 @@ static inline void tcp_wmem_free_skb(struct sock *sk, struct sk_buff *skb)
 		sk_mem_uncharge(sk, skb->truesize);
 	else
 		sk_mem_uncharge(sk, SKB_TRUESIZE(skb_end_offset(skb)));
+
+	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+		pr_err("tcp-wmem-free-skb free-status: 0x%x != 0x%x\n",
+		       skb->free_status, SKB_ALREADY_ALLOCATED);
+		return;
+	}
 	__kfree_skb(skb);
 }
 
