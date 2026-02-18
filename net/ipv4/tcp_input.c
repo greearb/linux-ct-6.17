@@ -3413,6 +3413,14 @@ static int tcp_clean_rtx_queue(struct sock *sk, const struct sk_buff *ack_skb,
 		u8 sacked = scb->sacked;
 		u32 acked_pcount;
 
+		if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+			pr_err("tcp-clean-rtx-queue free-status: 0x%x != 0x%x\n",
+			       skb->free_status, SKB_ALREADY_ALLOCATED);
+			tcp_rtx_queue_unlink_and_free(skb, sk);
+			skb = NULL;
+			break;
+		}
+
 		/* Determine how many packets and what bytes were acked, tso and else */
 		if (after(scb->end_seq, tp->snd_una)) {
 			if (tcp_skb_pcount(skb) == 1 ||
