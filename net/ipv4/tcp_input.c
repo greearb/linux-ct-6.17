@@ -3487,6 +3487,14 @@ static int tcp_clean_rtx_queue(struct sock *sk, const struct sk_buff *ack_skb,
 
 		tcp_ack_tstamp(sk, skb, ack_skb, prior_snd_una);
 
+		if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
+			pr_err("tcp-clean-rtx-queue 2 free-status: 0x%x != 0x%x\n",
+			       skb->free_status, SKB_ALREADY_ALLOCATED);
+			tcp_rtx_queue_unlink_and_free(skb, sk);
+			skb = NULL;
+			break;
+		}
+
 		next = skb_rb_next(skb);
 		if (unlikely(skb == tp->retransmit_skb_hint))
 			tp->retransmit_skb_hint = NULL;
