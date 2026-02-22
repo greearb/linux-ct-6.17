@@ -1245,7 +1245,9 @@ static void kfree_skb_add_bulk(struct sk_buff *skb,
 		return;
 	}
 	skb_release_all(skb, reason);
+#ifndef CONFIG_KASAN
 	skb->free_status = SKB_ALREADY_FREED;
+#endif
 	sa->skb_array[sa->skb_count++] = skb;
 
 	if (unlikely(sa->skb_count == KFREE_SKB_BULK_SIZE)) {
@@ -1445,15 +1447,19 @@ static void napi_skb_cache_put(struct sk_buff *skb)
 	if (!kasan_mempool_poison_object(skb))
 		return;
 
+#ifndef CONFIG_KASAN
 	if (WARN_ON_ONCE(skb->free_status != SKB_ALREADY_ALLOCATED)) {
 		pr_err("napi-skb-cache-put free-status: 0x%x != 0x%x\n",
 		       skb->free_status, SKB_ALREADY_ALLOCATED);
 		return;
 	}
+#endif
 
 	local_lock_nested_bh(&napi_alloc_cache.bh_lock);
 	nc->skb_cache[nc->skb_count++] = skb;
+#ifndef CONFIG_KASAN
 	skb->free_status = SKB_ALREADY_FREED;
+#endif
 
 	if (unlikely(nc->skb_count == NAPI_SKB_CACHE_SIZE)) {
 		for (i = NAPI_SKB_CACHE_HALF; i < NAPI_SKB_CACHE_SIZE; i++)
@@ -6141,7 +6147,9 @@ void kfree_skb_partial(struct sk_buff *skb, bool head_stolen)
 			return;
 		}
 		skb_release_head_state(skb);
+#ifndef CONFIG_KASAN
 		skb->free_status = SKB_ALREADY_FREED;
+#endif
 		kmem_cache_free(net_hotdata.skbuff_cache, skb);
 	} else {
 		__kfree_skb(skb);
