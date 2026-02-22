@@ -1114,13 +1114,13 @@ void ieee80211_link_debugfs_remove(struct ieee80211_link_data *link)
 {
 	struct dentry *dir;
 
-	spin_lock(&link->debugfs_lock);
-	dir = link->lnk_debugfs_dir;
-
 	if (WARN_ON_ONCE((unsigned long)(link) < 8000)) {
 		pr_err("link-debugfs-remove, link is bad: %px\n", link);
-		goto out;
+		return;
 	}
+
+	spin_lock(&link->debugfs_lock);
+	dir = link->lnk_debugfs_dir;
 
 	if (!link->sdata->vif.debugfs_dir || !link->lnk_debugfs_dir) {
 		link->lnk_debugfs_dir = NULL;
@@ -1161,9 +1161,12 @@ void ieee80211_link_debugfs_drv_remove(struct ieee80211_link_data *link)
 {
 	struct dentry *dir;
 
+	if (!link)
+		return;
+
 	spin_lock(&link->debugfs_lock);
 
-	if (!link || !link->lnk_debugfs_dir)
+	if (!link->lnk_debugfs_dir)
 		goto out;
 
 	if (WARN_ON(link->lnk_debugfs_dir == link->sdata->vif.debugfs_dir))
