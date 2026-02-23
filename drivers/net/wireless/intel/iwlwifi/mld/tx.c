@@ -1429,9 +1429,6 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 
 		iwl_mld_hwrate_to_tx_rate(mld, tx_resp->initial_rate, info);
 
-		if (likely(!iwl_mld_time_sync_frame(mld, skb, hdr->addr1)))
-			ieee80211_tx_status_skb(mld->hw, skb);
-
 		if (skb_freed <= 1) {
 			info->status.rates[0].count = tx_resp->failure_frame + 1;
 			mld->ethtool_stats.tx_mpdu_attempts += info->status.rates[0].count;
@@ -1447,6 +1444,9 @@ void iwl_mld_handle_tx_resp_notif(struct iwl_mld *mld,
 				mld->ethtool_stats.txo_tx_mpdu_attempts += 1;
 		}
 		iwl_mld_update_tx_stats(mld, skb, status, &cb);
+
+		if (likely(!iwl_mld_time_sync_frame(mld, skb, hdr->addr1)))
+			ieee80211_tx_status_skb(mld->hw, skb);
 	}
 
 	IWL_DEBUG_TX_REPLY(mld,
