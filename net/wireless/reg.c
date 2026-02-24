@@ -3218,7 +3218,11 @@ static void reg_process_self_managed_hints(void)
 
 static void reg_todo(struct work_struct *work)
 {
-	rtnl_lock();
+	if (!rtnl_trylock()) {
+		/* Try again later */
+		schedule_work(work);
+		return;
+	}
 	reg_process_pending_hints();
 	reg_process_pending_beacon_hints();
 	reg_process_self_managed_hints();
