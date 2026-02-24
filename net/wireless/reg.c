@@ -3218,6 +3218,12 @@ static void reg_process_self_managed_hints(void)
 
 static void reg_todo(struct work_struct *work)
 {
+	/* NOTE:  This is not a full fix for the deadlock between cma alloc
+	 * calling into swap.c where it blocks until all tasks have been
+	 * cleared, since inside the rtnl here, we take wiphy lock, and that
+	 * can still deadlock.  The rtnl trylock does make it harder to hit
+	 * the problem, however.
+	 */
 	if (!rtnl_trylock()) {
 		/* Try again later */
 		schedule_work(work);
