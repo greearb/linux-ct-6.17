@@ -6061,9 +6061,15 @@ ieee80211_determine_our_sta_mode_auth(struct ieee80211_sub_if_data *sdata,
 				      bool wmm_used,
 				      struct ieee80211_conn_settings *conn)
 {
+	struct ieee80211_conn_settings tmp = { 0 };
+
 	ieee80211_determine_our_sta_mode(sdata, sband, NULL, wmm_used,
 					 req->link_id > 0 ? req->link_id : 0,
-					 conn);
+					 &tmp);
+
+	conn->mode = tmp.mode;
+	conn->bw_limit = min_t(enum ieee80211_conn_bw_limit,
+			       conn->bw_limit, tmp.bw_limit);
 }
 
 static void
@@ -9319,6 +9325,23 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 			    req->ie_len, GFP_KERNEL);
 	if (!auth_data)
 		return -ENOMEM;
+
+	if (req->flags & ASSOC_REQ_DISABLE_320)
+		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
+				      conn.bw_limit,
+				      IEEE80211_CONN_BW_LIMIT_320);
+	if (req->flags & ASSOC_REQ_DISABLE_160)
+		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
+				      conn.bw_limit,
+				      IEEE80211_CONN_BW_LIMIT_160);
+	if (req->flags & ASSOC_REQ_DISABLE_80)
+		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
+				      conn.bw_limit,
+				      IEEE80211_CONN_BW_LIMIT_80);
+	if (req->flags & ASSOC_REQ_DISABLE_40)
+		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
+				      conn.bw_limit,
+				      IEEE80211_CONN_BW_LIMIT_40);
 
 	memcpy(auth_data->ap_addr,
 	       req->ap_mld_addr ?: req->bss->bssid,
