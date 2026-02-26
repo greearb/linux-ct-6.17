@@ -3210,6 +3210,7 @@ static inline const u8 *ieee80211_bss_get_ie(struct cfg80211_bss *bss, u8 id)
  *	given an MLD address) by the driver
  * @ap_mld_addr: AP MLD address in case of authentication request with
  *	an AP MLD, valid iff @link_id >= 0
+ * @flags: Authentication request override flags (uses cfg80211_assoc_req_flags).
  */
 struct cfg80211_auth_request {
 	struct cfg80211_bss *bss;
@@ -3225,6 +3226,7 @@ struct cfg80211_auth_request {
 	size_t auth_data_len;
 	s8 link_id;
 	const u8 *ap_mld_addr;
+	u32 flags;
 };
 
 /**
