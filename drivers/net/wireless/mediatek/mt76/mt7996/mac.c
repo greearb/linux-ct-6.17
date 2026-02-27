@@ -1870,10 +1870,21 @@ next:
 				continue;
 			}
 
-			WARN_ON_ONCE(time_is_before_jiffies(txwi->jiffies + HZ));
+			if (WARN_ON_ONCE(time_is_before_jiffies(txwi->jiffies + HZ))) {
+				static bool done_once = false;
 
-			mtk_dbg(mdev, TXV, "mt7996-mac-tx-free, msdu: %d, tx-cnt: %d  t_status: %d count: %d/%d\n",
-				msdu, tx_retries + 1, tx_status, count, total);
+				if (done_once)
+					goto logme;
+				done_once = true;
+				dev_err(mdev->dev, "WARNING: txwi jiffies incorrect?  txwi->jiffies: %lu  jiffies: %lu\n",
+					txwi->jiffies, jiffies);
+				dev_err(mdev->dev, "mt7996-mac-tx-free, msdu: %d, tx-cnt: %d  t_status: %d count: %d/%d\n",
+					msdu, tx_retries + 1, tx_status, count, total);
+			} else {
+			logme:
+				mtk_dbg(mdev, TXV, "mt7996-mac-tx-free, msdu: %d, tx-cnt: %d  t_status: %d count: %d/%d\n",
+					msdu, tx_retries + 1, tx_status, count, total);
+			}
 
 			mt7996_txwi_free(dev, txwi, link_sta, wcid, &free_list,
 					 tx_retries + 1, tx_status);
