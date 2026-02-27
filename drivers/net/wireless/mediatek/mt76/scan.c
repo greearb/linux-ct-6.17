@@ -150,8 +150,10 @@ void mt76_scan_work(struct work_struct *work)
 
 	/* If we are scanning on current mgt channel, we do not need
 	 * to go off-channel.
+	 * However, if there are no STAs, it is possible to skip the stale
+	 * channel left in phy->main_chandef.chan, so make sure we get that too.
 	 */
-	if (dev->scan.chan != phy->main_chandef.chan) {
+	if (dev->scan.chan != phy->main_chandef.chan || phy->num_sta == 0) {
 		cfg80211_chandef_create(&chandef, dev->scan.chan, NL80211_CHAN_HT20);
 		mt76_set_channel(phy, &chandef, true);
 		mt76_dbg(dev, MT76_DBG_SCAN, "%s: moving freq: %d for chan_idx: %d\n",
