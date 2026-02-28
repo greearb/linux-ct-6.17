@@ -6071,6 +6071,8 @@ ieee80211_determine_our_sta_mode_auth(struct ieee80211_sub_if_data *sdata,
 					 &tmp);
 
 	conn->mode = tmp.mode;
+	//pr_err("our-sta-mode-auth, conn bw-limit: %d  tmp bw limit: %d\n",
+	//       conn->bw_limit, tmp.bw_limit);
 	conn->bw_limit = min_t(enum ieee80211_conn_bw_limit,
 			       conn->bw_limit, tmp.bw_limit);
 }
@@ -6179,8 +6181,12 @@ static int ieee80211_prep_channel(struct ieee80211_sub_if_data *sdata,
 	rcu_read_unlock();
 
 	// TODO: Find existing vdevs and base on their bw limit instead
-	while (conn->bw_limit < ieee80211_min_bw_limit_from_chandef(&chanreq.oper))
+	while (conn->bw_limit < ieee80211_min_bw_limit_from_chandef(&chanreq.oper)) {
+		link_info(link,
+			  "Downgrade chandef, conn bw_limit: %d  min-from-chandef: %d\n",
+			  conn->bw_limit, ieee80211_min_bw_limit_from_chandef(&chanreq.oper));
 		ieee80211_chandef_downgrade(&chanreq.oper, NULL);
+	}
 
 	/*
 	 * If this fails (possibly due to channel context sharing
@@ -9283,6 +9289,8 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 	int err;
 	bool cont_auth, wmm_used;
 
+	conn.bw_limit = IEEE80211_CONN_BW_LIMIT_320;
+
 	lockdep_assert_wiphy(sdata->local->hw.wiphy);
 
 	/* prepare auth data structure */
@@ -9348,6 +9356,8 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
 				      conn.bw_limit,
 				      IEEE80211_CONN_BW_LIMIT_40);
+	//pr_err("mgd-auth, after limiting bw: conn bw-limit: %d  req->flags: 0x%x\n",
+	//       conn.bw_limit, req->flags);
 
 	memcpy(auth_data->ap_addr,
 	       req->ap_mld_addr ?: req->bss->bssid,
