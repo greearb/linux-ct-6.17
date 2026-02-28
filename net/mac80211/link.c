@@ -408,8 +408,6 @@ static int ieee80211_vif_update_links(struct ieee80211_sub_if_data *sdata,
 
 	ret = ieee80211_check_dup_link_addrs(sdata);
 	if (!ret) {
-		sdata_err(sdata, "ieee80211_check_dup_link_addrs returned error, cleaning links, ret %d  new_links: 0x%x dormant_links: 0x%x rem: 0x%lx\n",
-			  ret, new_links, dormant_links, rem);
 		/* for keys we will not be able to undo this */
 		ieee80211_tear_down_links(sdata, to_free, rem);
 
