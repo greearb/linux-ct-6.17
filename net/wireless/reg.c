@@ -3251,9 +3251,11 @@ static int regdom_kthread_function(void *data) {
 			reg_todo_work();
 		}
 		if (pending_disconnect_work) {
+			rtnl_lock();
 			pending_disconnect_work = false;
 			if (cfg80211_is_all_idle())
 				regulatory_hint_disconnect();
+			rtnl_unlock();
 		}
 
 		if (!(pending_reg_todo_work || pending_disconnect_work))
