@@ -6070,6 +6070,8 @@ ieee80211_determine_our_sta_mode_auth(struct ieee80211_sub_if_data *sdata,
 					 req->link_id > 0 ? req->link_id : 0,
 					 &tmp);
 
+	// TODO: Handle mode the same way here when we inevitably limit it for
+	// auth too...
 	conn->mode = tmp.mode;
 	//pr_err("our-sta-mode-auth, conn bw-limit: %d  tmp bw limit: %d\n",
 	//       conn->bw_limit, tmp.bw_limit);
@@ -9289,6 +9291,8 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 	int err;
 	bool cont_auth, wmm_used;
 
+	// TODO: Use `ieee80211_conn_settings_unlimited` when we inenvitably
+	// do the same work for mode
 	conn.bw_limit = IEEE80211_CONN_BW_LIMIT_320;
 
 	lockdep_assert_wiphy(sdata->local->hw.wiphy);
