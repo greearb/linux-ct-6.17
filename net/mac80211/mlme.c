@@ -9344,19 +9344,19 @@ int ieee80211_mgd_auth(struct ieee80211_sub_if_data *sdata,
 	if (req->flags & ASSOC_REQ_DISABLE_320)
 		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
 				      conn.bw_limit,
-				      IEEE80211_CONN_BW_LIMIT_320);
+				      IEEE80211_CONN_BW_LIMIT_160);
 	if (req->flags & ASSOC_REQ_DISABLE_160)
 		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
 				      conn.bw_limit,
-				      IEEE80211_CONN_BW_LIMIT_160);
+				      IEEE80211_CONN_BW_LIMIT_80);
 	if (req->flags & ASSOC_REQ_DISABLE_80)
 		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
 				      conn.bw_limit,
-				      IEEE80211_CONN_BW_LIMIT_80);
+				      IEEE80211_CONN_BW_LIMIT_40);
 	if (req->flags & ASSOC_REQ_DISABLE_40)
 		conn.bw_limit = min_t(enum ieee80211_conn_bw_limit,
 				      conn.bw_limit,
-				      IEEE80211_CONN_BW_LIMIT_40);
+				      IEEE80211_CONN_BW_LIMIT_20);
 	//pr_err("mgd-auth, after limiting bw: conn bw-limit: %d  req->flags: 0x%x\n",
 	//       conn.bw_limit, req->flags);
 
