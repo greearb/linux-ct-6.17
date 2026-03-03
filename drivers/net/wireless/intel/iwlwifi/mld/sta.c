@@ -535,13 +535,19 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
 	if (ret)
 		return ret;
+	IWL_ERR(mld, "add-link-sta, allocated fw_id_to_link_sta[%d]\n",
+		fw_id);
 
 	if (link_sta == &link_sta->sta->deflink) {
 		mld_link_sta = &mld_sta->deflink;
 	} else {
 		mld_link_sta = kzalloc(sizeof(*mld_link_sta), GFP_KERNEL);
-		if (!mld_link_sta)
+		if (!mld_link_sta) {
+			IWL_ERR(mld, "mld-add-link-sta, OOM, clearing fw_id_to_link_sta[%d]\n",
+				fw_id);
+			RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
 			return -ENOMEM;
+		}
 	}
 
 	mld_link_sta->fw_id = fw_id;
@@ -550,6 +556,8 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 add_to_fw:
 	ret = iwl_mld_add_modify_sta_cmd(mld, link_sta);
 	if (ret) {
+		IWL_ERR(mld, "add-link-sta, add-modify-sta-cmd failed, clearing fw_id_to_link_sta[%d]\n",
+			fw_id);
 		RCU_INIT_POINTER(mld->fw_id_to_link_sta[fw_id], NULL);
 		RCU_INIT_POINTER(mld_sta->link[link_sta->link_id], NULL);
 		if (link_sta != &link_sta->sta->deflink)
@@ -572,7 +580,8 @@ static int iwl_mld_rm_sta_from_fw(struct iwl_mld *mld, u8 fw_sta_id)
 				   WIDE_ID(MAC_CONF_GROUP, STA_REMOVE_CMD),
 				   &cmd);
 	if (ret)
-		IWL_ERR(mld, "Failed to remove station. Id=%d\n", fw_sta_id);
+		IWL_ERR(mld, "Failed to remove station. Id=%d ret: %d\n",
+			fw_sta_id, ret);
 
 	return ret;
 }
@@ -600,6 +609,8 @@ iwl_mld_remove_link_sta(struct iwl_mld *mld,
 	/* This will not be done upon reconfig, so do it also when
 	 * failed to remove from fw
 	 */
+	IWL_ERR(mld, "mld-remove-link-sta, clearing fw_id_to_link_sta[%d]\n",
+		mld_link_sta->fw_id);
 	RCU_INIT_POINTER(mld->fw_id_to_link_sta[mld_link_sta->fw_id], NULL);
 	RCU_INIT_POINTER(mld_sta->link[link_sta->link_id], NULL);
 	if (mld_link_sta != &mld_sta->deflink)
@@ -740,8 +751,10 @@ int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	int ret;
 
 	ret = iwl_mld_init_sta(mld, sta, vif, type);
-	if (ret)
+	if (ret) {
+		IWL_ERR(mld, "iwl-mld-add-sta, mld-init-sta failed. ret=%d\n", ret);
 		return ret;
+	}
 
 	/* We could have add only the deflink link_sta, but it will not work
 	 * in the restart case if the single link that is active during
@@ -749,8 +762,10 @@ int iwl_mld_add_sta(struct iwl_mld *mld, struct ieee80211_sta *sta,
 	 */
 	for_each_sta_active_link(mld_sta->vif, sta, link_sta, link_id) {
 		ret = iwl_mld_add_link_sta(mld, link_sta);
-		if (ret)
+		if (ret) {
+			IWL_ERR(mld, "iwl-mld-add-sta, mld-add-link-sta failed. ret=%d\n", ret);
 			goto destroy_sta;
+		}
 	}
 
 	return 0;
