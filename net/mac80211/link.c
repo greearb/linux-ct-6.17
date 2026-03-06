@@ -201,13 +201,70 @@ static void ieee80211_tear_down_links(struct ieee80211_sub_if_data *sdata,
 	ieee80211_free_key_list(sdata->local, &keys);
 }
 
+/* Check for link still being in a channel context list, remove it if so.
+ */
+static void pre_link_free(struct ieee80211_sub_if_data *sdata,
+			  struct link_container *link)
+{
+	struct ieee80211_local *local = sdata->local;
+	struct ieee80211_chanctx *ctx;
+	struct ieee80211_link_data *link_iter, *tmp;
+
+	lockdep_assert_wiphy(local->hw.wiphy);
+
+	if (!link)
+		return;
+
+	if (WARN_ON_ONCE(link->data.reserved_chanctx_list.next != link->data.reserved_chanctx_list.prev &&
+			 link->data.reserved_chanctx_list.next != LIST_POISON1 &&
+			 link->data.reserved_chanctx_list.next != NULL)) {
+		sdata_err(sdata, "Deleting link, with reserved-chanctx_list.next: 0x%px  prev: 0x%px\n",
+			  link->data.reserved_chanctx_list.next, link->data.reserved_chanctx_list.prev);
+		list_del(&link->data.reserved_chanctx_list);
+	}
+	if (WARN_ON_ONCE(link->data.assigned_chanctx_list.next != link->data.assigned_chanctx_list.prev &&
+			 link->data.assigned_chanctx_list.next != LIST_POISON1 &&
+			 link->data.assigned_chanctx_list.next != NULL)) {
+		sdata_err(sdata, "Deleting link, with assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+			  link->data.assigned_chanctx_list.next, link->data.assigned_chanctx_list.prev);
+		list_del(&link->data.assigned_chanctx_list);
+	}
+
+	/* The above doesn't seem to catch everything, still seeing use-after-free.
+	 * See if we somehow have link references still?  I'm suspicious that the
+	 * cleanup below won't work if so.
+	 */
+	list_for_each_entry(ctx, &local->chanctx_list, list) {
+		list_for_each_entry_safe(link_iter, tmp, &ctx->reserved_links, reserved_chanctx_list) {
+			if (WARN_ON_ONCE(link_iter == &link->data)) {
+				sdata_err(sdata, "Deleting link, in ctx reserved_links, assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+					  link_iter->reserved_chanctx_list.next, link_iter->reserved_chanctx_list.prev);
+				list_del(&link_iter->reserved_chanctx_list);
+			}
+		}
+		list_for_each_entry_safe(link_iter, tmp, &ctx->assigned_links, assigned_chanctx_list) {
+			if (WARN_ON_ONCE(link_iter == &link->data)) {
+				sdata_err(sdata, "Deleting link, in ctx assigned_links, assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+					  link_iter->assigned_chanctx_list.next, link_iter->assigned_chanctx_list.prev);
+				list_del(&link_iter->assigned_chanctx_list);
+			}
+		}
+	}
+}
+
 static void ieee80211_free_links(struct ieee80211_sub_if_data *sdata,
 				 struct link_container **links)
 {
 	unsigned int link_id;
+	struct link_container *link;
 
-	for (link_id = 0; link_id < IEEE80211_MLD_MAX_NUM_LINKS; link_id++)
-		kfree(links[link_id]);
+	for (link_id = 0; link_id < IEEE80211_MLD_MAX_NUM_LINKS; link_id++) {
+		link = links[link_id];
+		if (!link)
+			continue;
+		pre_link_free(sdata, link);
+		kfree(link);
+	}
 }
 
 /* For cases where we need a link for stats and such, and just want
@@ -450,6 +507,7 @@ static int ieee80211_vif_update_links(struct ieee80211_sub_if_data *sdata,
 free:
 	/* if we failed during allocation, only free all */
 	for (link_id = 0; link_id < IEEE80211_MLD_MAX_NUM_LINKS; link_id++) {
+		pre_link_free(sdata, links[link_id]);
 		kfree(links[link_id]);
 		links[link_id] = NULL;
 	}
