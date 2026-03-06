@@ -1882,6 +1882,12 @@ static void iwl_mld_mac80211_flush(struct ieee80211_hw *hw,
 		if (IS_ERR_OR_NULL(link_sta))
 			continue;
 
+		if (WARN_ON_ONCE(((unsigned long)(link_sta)) < 8000)) {
+			IWL_ERR(mld, "ERROR:  link_sta[%i] is bad: 0x%px\n",
+				i, link_sta);
+			continue;
+		}
+
 		/* Check that the sta belongs to the given vif */
 		mld_sta = iwl_mld_sta_from_mac80211(link_sta->sta);
 		if (vif && (!mld_sta || (vif != mld_sta->vif)))
