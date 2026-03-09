@@ -535,8 +535,8 @@ iwl_mld_add_link_sta(struct iwl_mld *mld, struct ieee80211_link_sta *link_sta)
 	ret = iwl_mld_allocate_link_sta_fw_id(mld, &fw_id, link_sta);
 	if (ret)
 		return ret;
-	IWL_ERR(mld, "add-link-sta, allocated fw_id_to_link_sta[%d]\n",
-		fw_id);
+	//IWL_ERR(mld, "add-link-sta, allocated fw_id_to_link_sta[%d]\n",
+	//	fw_id);
 
 	if (link_sta == &link_sta->sta->deflink) {
 		mld_link_sta = &mld_sta->deflink;
@@ -609,8 +609,8 @@ iwl_mld_remove_link_sta(struct iwl_mld *mld,
 	/* This will not be done upon reconfig, so do it also when
 	 * failed to remove from fw
 	 */
-	IWL_ERR(mld, "mld-remove-link-sta, clearing fw_id_to_link_sta[%d]\n",
-		mld_link_sta->fw_id);
+	//IWL_ERR(mld, "mld-remove-link-sta, clearing fw_id_to_link_sta[%d]\n",
+	//	mld_link_sta->fw_id);
 	RCU_INIT_POINTER(mld->fw_id_to_link_sta[mld_link_sta->fw_id], NULL);
 	RCU_INIT_POINTER(mld_sta->link[link_sta->link_id], NULL);
 	if (mld_link_sta != &mld_sta->deflink)
