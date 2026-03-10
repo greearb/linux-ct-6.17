@@ -224,6 +224,53 @@ static void ieee80211_tear_down_links(struct ieee80211_sub_if_data *sdata,
 	ieee80211_free_key_list(sdata->local, &keys);
 }
 
+
+static void attempt_repair_ctx_list(struct ieee80211_sub_if_data *sdata,
+				    struct ieee80211_link_data *bad_iter,
+				    struct list_head *list)
+{
+	struct ieee80211_link_data *link_iter;
+	int last_good_idx_forward;
+	int last_good_idx_backwards;
+
+	/* We found a list item that is mis-linked somehow, and it should no
+	 * longer be in the list.  Remove it as best a we are able.  This could
+	 * leak memory depending on how bad the list is mangled.
+	 */
+	if (bad_iter->assigned_chanctx_list.next == bad_iter->assigned_chanctx_list.prev) {
+		/* Find the last one before the bad iter. */
+		last_good_idx_forward = 0;
+		list_for_each_entry(link_iter, list, reserved_chanctx_list) {
+			if (link_iter == bad_iter)
+				break;
+			last_good_idx_forward++;
+		}
+
+		/* Find the last one before the bad iter when searching backwards. */
+		last_good_idx_backwards = 0;
+		list_for_each_entry_reverse(link_iter, list, reserved_chanctx_list) {
+			if (link_iter == bad_iter)
+				break;
+			last_good_idx_backwards++;
+		}
+
+		/* If it was only entry, we can just initialize the list head and be done. */
+		if (last_good_idx_backwards == 0 && last_good_idx_forward == 0) {
+			sdata_err(sdata, "Repair-ctx-list, only one bad item, initialize list head to repair.\n");
+			INIT_LIST_HEAD(list);
+		}
+		else {
+			/* Bleh, stitch list back to gether somehow */
+			sdata_err(sdata, "ERROR: Repair-ctx-list, last_good_idx_forward: %d  backwards: %d  Cannot repair.\n",
+				  last_good_idx_forward, last_good_idx_backwards);
+		}
+	}
+	else {
+		sdata_err(sdata, "Repair-ctx-list, next/prev not as hoped for cleanup: next 0x%px  prev: 0x%px.  Cannot repair.\n",
+			  bad_iter->assigned_chanctx_list.next, bad_iter->assigned_chanctx_list.prev);
+	}
+}
+
 /* Check for link still being in a channel context list, remove it if so.
  */
 static void pre_link_free(struct ieee80211_sub_if_data *sdata,
@@ -232,6 +279,7 @@ static void pre_link_free(struct ieee80211_sub_if_data *sdata,
 	struct ieee80211_local *local = sdata->local;
 	struct ieee80211_chanctx *ctx;
 	struct ieee80211_link_data *link_iter, *tmp;
+	int i;
 
 	lockdep_assert_wiphy(local->hw.wiphy);
 
@@ -256,21 +304,33 @@ static void pre_link_free(struct ieee80211_sub_if_data *sdata,
 	/* The above doesn't seem to catch everything, still seeing use-after-free.
 	 * See if we somehow have link references still?  I'm suspicious that the
 	 * cleanup below won't work if so.
+	 * So, finally hit this:  the reserved_chanctx_list.next and prev point to same thing.
+	 * Maybe a mis-linked list or something like that?
 	 */
 	list_for_each_entry(ctx, &local->chanctx_list, list) {
+		i = 0;
 		list_for_each_entry_safe(link_iter, tmp, &ctx->reserved_links, reserved_chanctx_list) {
 			if (WARN_ON_ONCE(link_iter == &link->data)) {
-				sdata_err(sdata, "Deleting link, in ctx reserved_links, assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+				sdata_err(sdata, "Deleting link %px tmp %px idx: %d, in ctx reserved_links, assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+					  link_iter, tmp, i,
 					  link_iter->reserved_chanctx_list.next, link_iter->reserved_chanctx_list.prev);
-				list_del(&link_iter->reserved_chanctx_list);
+				attempt_repair_ctx_list(sdata, link_iter, &ctx->assigned_links);
 			}
+			i++;
 		}
+
+		i = 0;
 		list_for_each_entry_safe(link_iter, tmp, &ctx->assigned_links, assigned_chanctx_list) {
 			if (WARN_ON_ONCE(link_iter == &link->data)) {
-				sdata_err(sdata, "Deleting link, in ctx assigned_links, assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+				sdata_err(sdata, "Deleting link %px tmp %px idx: %d, in ctx assigned_links, assigned-chanctx_list.next: 0x%px  prev: 0x%px\n",
+					  link_iter, tmp, i,
 					  link_iter->assigned_chanctx_list.next, link_iter->assigned_chanctx_list.prev);
-				list_del(&link_iter->assigned_chanctx_list);
+				/* If next and prev are same thing, then we cannot actually delete it as it is already
+				 * empty list.  And this must be the case or it would have been cleaned up above.
+				 */
+				attempt_repair_ctx_list(sdata, link_iter, &ctx->assigned_links);
 			}
+			i++;
 		}
 	}
 }
