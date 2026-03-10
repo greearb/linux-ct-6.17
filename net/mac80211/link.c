@@ -116,12 +116,26 @@ void ieee80211_link_init(struct ieee80211_sub_if_data *sdata,
 	link->user_power_level = sdata->local->user_power_level;
 	link_conf->txpower = INT_MIN;
 
-	wiphy_work_init(&link->csa.finalize_work,
-			ieee80211_csa_finalize_work);
-	wiphy_work_init(&link->color_change_finalize_work,
-			ieee80211_color_change_finalize_work);
-	wiphy_delayed_work_init(&link->color_collision_detect_work,
-				ieee80211_color_collision_detection_work);
+	if (link->already_initialized) {
+		wiphy_delayed_work_cancel(link->sdata->local->hw.wiphy,
+					  &link->color_collision_detect_work);
+		wiphy_work_cancel(link->sdata->local->hw.wiphy,
+				  &link->color_change_finalize_work);
+		wiphy_work_cancel(link->sdata->local->hw.wiphy,
+				  &link->csa.finalize_work);
+		wiphy_delayed_work_cancel(link->sdata->local->hw.wiphy,
+					  &link->dfs_cac_timer_work);
+	} else {
+		wiphy_work_init(&link->csa.finalize_work,
+				ieee80211_csa_finalize_work);
+		wiphy_work_init(&link->color_change_finalize_work,
+				ieee80211_color_change_finalize_work);
+		wiphy_delayed_work_init(&link->color_collision_detect_work,
+					ieee80211_color_collision_detection_work);
+		wiphy_delayed_work_init(&link->dfs_cac_timer_work,
+					ieee80211_dfs_cac_timer_work);
+	}
+
 	/* I see some sort of list corruption where links don't get removed from chanctx
 	 * lists.  I think if we are in a list while here, that could cause it.  deflink
 	 * appears to have chance of doing that.  So, remove from list first if
@@ -144,8 +158,6 @@ void ieee80211_link_init(struct ieee80211_sub_if_data *sdata,
 
 	INIT_LIST_HEAD(&link->assigned_chanctx_list);
 	INIT_LIST_HEAD(&link->reserved_chanctx_list);
-	wiphy_delayed_work_init(&link->dfs_cac_timer_work,
-				ieee80211_dfs_cac_timer_work);
 
 	if (!deflink) {
 		switch (sdata->vif.type) {
@@ -166,6 +178,7 @@ void ieee80211_link_init(struct ieee80211_sub_if_data *sdata,
 		ieee80211_link_debugfs_add(link);
 	}
 
+	link->already_initialized = true;
 	rcu_assign_pointer(sdata->vif.link_conf[link_id], link_conf);
 	rcu_assign_pointer(sdata->link[link_id], link);
 }
