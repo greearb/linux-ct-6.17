@@ -797,6 +797,11 @@ void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld, struct ieee80211_sta *sta)
 	if (!sta)
 		return;
 
+	if (WARN_ON(((unsigned long)(sta)) < 8000)) {
+		pr_err("mld-wait-sta-txqs-empty, bogus sta: 0x%px\n", sta);
+		return;
+	}
+
 	/* Avoid a warning in iwl_trans_wait_txq_empty if are anyway on the way
 	 * to a restart.
 	 */
@@ -807,7 +812,16 @@ void iwl_mld_wait_sta_txqs_empty(struct iwl_mld *mld, struct ieee80211_sta *sta)
 		struct iwl_mld_txq *mld_txq =
 			iwl_mld_txq_from_mac80211(sta->txq[i]);
 
-		if (!mld_txq || !mld_txq->status.allocated)
+		if (!mld_txq)
+			continue;
+
+		if (WARN_ON(((unsigned long)(mld_txq)) < 8000)) {
+			pr_err("mld-wait-sta-txqs-empty, bogus mld-txq[%d]: 0x%px\n",
+			       i, mld_txq);
+			continue;
+		}
+
+		if (!mld_txq->status.allocated)
 			continue;
 
 		iwl_trans_wait_txq_empty(mld->trans, mld_txq->fw_id);
