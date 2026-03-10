@@ -88,7 +88,10 @@ void ieee80211_link_init(struct ieee80211_sub_if_data *sdata,
 			 struct ieee80211_link_data *link,
 			 struct ieee80211_bss_conf *link_conf)
 {
+	struct ieee80211_local *local = sdata->local;
 	bool deflink = link_id < 0;
+
+	lockdep_assert_wiphy(local->hw.wiphy);
 
 	if (link_id < 0)
 		link_id = 0;
@@ -119,6 +122,26 @@ void ieee80211_link_init(struct ieee80211_sub_if_data *sdata,
 			ieee80211_color_change_finalize_work);
 	wiphy_delayed_work_init(&link->color_collision_detect_work,
 				ieee80211_color_collision_detection_work);
+	/* I see some sort of list corruption where links don't get removed from chanctx
+	 * lists.  I think if we are in a list while here, that could cause it.  deflink
+	 * appears to have chance of doing that.  So, remove from list first if
+	 * it is indeed in one.
+	 */
+	if (WARN_ON_ONCE((link->assigned_chanctx_list.next != LIST_POISON1)
+			 && (link->assigned_chanctx_list.next != link->assigned_chanctx_list.prev)
+			 && (link->assigned_chanctx_list.next))) {
+		sdata_err(sdata, "link-init: %d called while already in an assigned-chan-ctx list, clearing.\n",
+			  link_id);
+		list_del(&link->assigned_chanctx_list);
+	}
+	if (WARN_ON_ONCE((link->reserved_chanctx_list.next != LIST_POISON1)
+			 && (link->reserved_chanctx_list.next != link->reserved_chanctx_list.prev)
+			 && (link->reserved_chanctx_list.next))) {
+		sdata_err(sdata, "link-init: %d called while already in a reserved-chan-ctx list, clearing.\n",
+			  link_id);
+		list_del(&link->reserved_chanctx_list);
+	}
+
 	INIT_LIST_HEAD(&link->assigned_chanctx_list);
 	INIT_LIST_HEAD(&link->reserved_chanctx_list);
 	wiphy_delayed_work_init(&link->dfs_cac_timer_work,
