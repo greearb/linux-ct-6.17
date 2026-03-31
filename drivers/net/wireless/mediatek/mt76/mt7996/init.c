@@ -561,7 +561,6 @@ mt7996_init_wiphy(struct ieee80211_hw *hw, struct mtk_wed_device *wed)
 	ieee80211_hw_set(hw, CHANCTX_STA_CSA);
 	ieee80211_hw_set(hw, HANDLES_QUIET_CSA);
 	ieee80211_hw_set(hw, SPECTRUM_MGMT);
-	ieee80211_hw_set(hw, WANTS_VALID_LINKS); /* instead of just active links */
 
 	hw->max_tx_fragments = 4;
 	wiphy->txq_memory_limit = 32 << 20; /* 32 MiB */
