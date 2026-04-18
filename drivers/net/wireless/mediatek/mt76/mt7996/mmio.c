@@ -256,7 +256,7 @@ static const struct __map mt7990_reg_map[] = {
 	{0x0, 0x0, 0x0}, /* imply end of search */
 };
 
-static u32 mt7996_reg_map_l1(struct mt7996_dev *dev, u32 addr)
+static u32 mt7996_reg_map_l1(struct mt7996_dev *dev, u32 addr, u32 *size)
 {
 	u32 offset = FIELD_GET(MT_HIF_REMAP_L1_OFFSET, addr);
 	u32 base = FIELD_GET(MT_HIF_REMAP_L1_BASE, addr);
@@ -274,20 +274,25 @@ static u32 mt7996_reg_map_l1(struct mt7996_dev *dev, u32 addr)
 	/* use read to push write */
 	dev->bus_ops->rr(&dev->mt76, MT_HIF_REMAP_L1);
 
+	if (size)
+		*size = MT_HIF_REMAP_L1_OFFSET + 1 - offset;
+
 	return MT_HIF_REMAP_BASE_L1 + offset;
 }
 
-static u32 mt7996_reg_map_l2(struct mt7996_dev *dev, u32 addr)
+static u32 mt7996_reg_map_l2(struct mt7996_dev *dev, u32 addr, u32 *size)
 {
-	u32 offset, base, l2_mask, val;
+	u32 offset, base, l2_mask, val, chunk_size;
 
 	if (is_mt7990(&dev->mt76)) {
 		offset = FIELD_GET(MT_HIF_REMAP_L2_OFFSET_7990, addr);
+		chunk_size = MT_HIF_REMAP_L2_OFFSET_7990 + 1;
 		base = FIELD_GET(MT_HIF_REMAP_L2_BASE_7990, addr);
 		l2_mask = MT_HIF_REMAP_L2_MASK_7990;
 		val = FIELD_PREP(MT_HIF_REMAP_L2_MASK_7990, base);
 	} else {
 		offset = FIELD_GET(MT_HIF_REMAP_L2_OFFSET, addr);
+		chunk_size = MT_HIF_REMAP_L2_OFFSET + 1;
 		base = FIELD_GET(MT_HIF_REMAP_L2_BASE, addr);
 		l2_mask = MT_HIF_REMAP_L2_MASK;
 		val = FIELD_PREP(MT_HIF_REMAP_L2_MASK, base);
@@ -297,10 +302,13 @@ static u32 mt7996_reg_map_l2(struct mt7996_dev *dev, u32 addr)
 	/* use read to push write */
 	dev->bus_ops->rr(&dev->mt76, MT_HIF_REMAP_L2);
 
+	if (size)
+		*size = chunk_size - offset;
+
 	return MT_HIF_REMAP_BASE_L2 + offset;
 }
 
-static u32 mt7996_reg_map_cbtop(struct mt7996_dev *dev, u32 addr)
+static u32 mt7996_reg_map_cbtop(struct mt7996_dev *dev, u32 addr, u32 *size)
 {
 	u32 offset = FIELD_GET(MT_HIF_REMAP_CBTOP_OFFSET, addr);
 	u32 base = FIELD_GET(MT_HIF_REMAP_CBTOP_BASE, addr);
@@ -311,10 +319,13 @@ static u32 mt7996_reg_map_cbtop(struct mt7996_dev *dev, u32 addr)
 	/* use read to push write */
 	dev->bus_ops->rr(&dev->mt76, MT_HIF_REMAP_CBTOP);
 
+	if (size)
+		*size = MT_HIF_REMAP_CBTOP_OFFSET + 1 - offset;
+
 	return MT_HIF_REMAP_BASE_CBTOP + offset;
 }
 
-static u32 __mt7996_reg_addr(struct mt7996_dev *dev, u32 addr)
+static u32 __mt7996_reg_addr(struct mt7996_dev *dev, u32 addr, u32 *size)
 {
 	int i;
 
@@ -331,62 +342,80 @@ static u32 __mt7996_reg_addr(struct mt7996_dev *dev, u32 addr)
 		if (ofs >= dev->reg.map[i].size)
 			continue;
 
+		if (size)
+			*size = dev->reg.map[i].size - ofs;
+
 		return dev->reg.map[i].mapped + ofs;
 	}
 
 	return 0;
 }
 
-static u32 __mt7996_reg_remap_addr(struct mt7996_dev *dev, u32 addr)
+static u32 __mt7996_reg_remap_addr(struct mt7996_dev *dev, u32 addr, u32 *size)
 {
 	if ((addr >= MT_INFRA_BASE && addr < MT_WFSYS0_PHY_START) ||
 	    (addr >= MT_WFSYS0_PHY_START && addr < MT_WFSYS1_PHY_START) ||
 	    (addr >= MT_WFSYS1_PHY_START && addr <= MT_WFSYS1_PHY_END))
-		return mt7996_reg_map_l1(dev, addr);
+		return mt7996_reg_map_l1(dev, addr, size);
 
 	/* CONN_INFRA: covert to phyiscal addr and use layer 1 remap */
 	if (addr >= MT_INFRA_MCU_START && addr <= MT_INFRA_MCU_END) {
 		addr = addr - MT_INFRA_MCU_START + MT_INFRA_BASE;
-		return mt7996_reg_map_l1(dev, addr);
+		return mt7996_reg_map_l1(dev, addr, size);
 	}
 
 	if (dev_is_pci(dev->mt76.dev) &&
 	    ((addr >= MT_CBTOP1_PHY_START && addr <= MT_CBTOP1_PHY_END) ||
 	    addr >= MT_CBTOP2_PHY_START)) {
 		if (is_mt7990(&dev->mt76))
-			return mt7996_reg_map_cbtop(dev, addr);
-		return mt7996_reg_map_l1(dev, addr);
+			return mt7996_reg_map_cbtop(dev, addr, size);
+		return mt7996_reg_map_l1(dev, addr, size);
 	}
 
-	return mt7996_reg_map_l2(dev, addr);
+	return mt7996_reg_map_l2(dev, addr, size);
 }
 
 void mt7996_memcpy_fromio(struct mt7996_dev *dev, void *buf, u32 offset,
 			  size_t len)
 {
-	u32 addr = __mt7996_reg_addr(dev, offset);
+	u32 read_limit, chunk_size, addr;
+	addr = __mt7996_reg_addr(dev, offset, &read_limit);
 
 	if (addr) {
-		memcpy_fromio(buf, dev->mt76.mmio.regs + addr, len);
-		return;
+		chunk_size = min(len, read_limit);
+		memcpy_fromio(buf, dev->mt76.mmio.regs + addr, chunk_size);
+
+		len -= chunk_size;
+		offset += chunk_size;
+		buf += chunk_size;
 	}
 
 	spin_lock_bh(&dev->reg_lock);
-	memcpy_fromio(buf, dev->mt76.mmio.regs +
-			   __mt7996_reg_remap_addr(dev, offset), len);
+	while (len) {
+		addr = __mt7996_reg_addr(dev, offset, &read_limit);
+		if (!addr)
+			addr = __mt7996_reg_remap_addr(dev, offset, &read_limit);
+
+		chunk_size = min(len, read_limit);
+		memcpy_fromio(buf, dev->mt76.mmio.regs + addr, chunk_size);
+
+		len -= chunk_size;
+		offset += chunk_size;
+		buf += chunk_size;
+	}
 	spin_unlock_bh(&dev->reg_lock);
 }
 
 static u32 mt7996_rr(struct mt76_dev *mdev, u32 offset)
 {
 	struct mt7996_dev *dev = container_of(mdev, struct mt7996_dev, mt76);
-	u32 addr = __mt7996_reg_addr(dev, offset), val;
+	u32 addr = __mt7996_reg_addr(dev, offset, NULL), val;
 
 	if (addr)
 		return dev->bus_ops->rr(mdev, addr);
 
 	spin_lock_bh(&dev->reg_lock);
-	val = dev->bus_ops->rr(mdev, __mt7996_reg_remap_addr(dev, offset));
+	val = dev->bus_ops->rr(mdev, __mt7996_reg_remap_addr(dev, offset, NULL));
 	spin_unlock_bh(&dev->reg_lock);
 
 	return val;
@@ -395,7 +424,7 @@ static u32 mt7996_rr(struct mt76_dev *mdev, u32 offset)
 static void mt7996_wr(struct mt76_dev *mdev, u32 offset, u32 val)
 {
 	struct mt7996_dev *dev = container_of(mdev, struct mt7996_dev, mt76);
-	u32 addr = __mt7996_reg_addr(dev, offset);
+	u32 addr = __mt7996_reg_addr(dev, offset, NULL);
 
 	if (addr) {
 		dev->bus_ops->wr(mdev, addr, val);
@@ -403,20 +432,20 @@ static void mt7996_wr(struct mt76_dev *mdev, u32 offset, u32 val)
 	}
 
 	spin_lock_bh(&dev->reg_lock);
-	dev->bus_ops->wr(mdev, __mt7996_reg_remap_addr(dev, offset), val);
+	dev->bus_ops->wr(mdev, __mt7996_reg_remap_addr(dev, offset, NULL), val);
 	spin_unlock_bh(&dev->reg_lock);
 }
 
 static u32 mt7996_rmw(struct mt76_dev *mdev, u32 offset, u32 mask, u32 val)
 {
 	struct mt7996_dev *dev = container_of(mdev, struct mt7996_dev, mt76);
-	u32 addr = __mt7996_reg_addr(dev, offset);
+	u32 addr = __mt7996_reg_addr(dev, offset, NULL);
 
 	if (addr)
 		return dev->bus_ops->rmw(mdev, addr, mask, val);
 
 	spin_lock_bh(&dev->reg_lock);
-	val = dev->bus_ops->rmw(mdev, __mt7996_reg_remap_addr(dev, offset), mask, val);
+	val = dev->bus_ops->rmw(mdev, __mt7996_reg_remap_addr(dev, offset, NULL), mask, val);
 	spin_unlock_bh(&dev->reg_lock);
 
 	return val;
