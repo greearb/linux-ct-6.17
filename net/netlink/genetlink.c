@@ -126,12 +126,13 @@ genl_op_fill_in_reject_policy_split(const struct genl_family *family,
 	op->maxattr = 1;
 }
 
-static const struct genl_family *genl_family_find_byid(unsigned int id)
+const struct genl_family *genl_family_find_byid(unsigned int id)
 {
 	return idr_find(&genl_fam_idr, id);
 }
+EXPORT_SYMBOL(genl_family_find_byid);
 
-static const struct genl_family *genl_family_find_byname(char *name)
+const struct genl_family *genl_family_find_byname(char *name)
 {
 	const struct genl_family *family;
 	unsigned int id;
@@ -142,6 +143,7 @@ static const struct genl_family *genl_family_find_byname(char *name)
 
 	return NULL;
 }
+EXPORT_SYMBOL(genl_family_find_byname);
 
 struct genl_op_iter {
 	const struct genl_family *family;
