@@ -68,6 +68,9 @@
 #include <net/sock.h>
 #include <net/scm.h>
 #include <net/netlink.h>
+#include <net/genetlink.h>
+#include <linux/bpf-cgroup.h>
+#include <linux/nl80211.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/netlink.h>
 
@@ -692,6 +695,11 @@ static int netlink_create(struct net *net, struct socket *sock, int protocol,
 	nlk->netlink_bind = bind;
 	nlk->netlink_unbind = unbind;
 	nlk->netlink_release = release;
+	if (!kern) {
+		err = BPF_CGROUP_RUN_PROG_INET_SOCK(sock->sk);
+		if (err)
+			goto out_module;
+	}
 out:
 	return err;
 
@@ -725,6 +733,9 @@ static int netlink_release(struct socket *sock)
 	netlink_remove(sk);
 	sock_orphan(sk);
 	nlk = nlk_sk(sk);
+
+	if (!sk->sk_kern_sock)
+		BPF_CGROUP_RUN_PROG_INET_SOCK_RELEASE(sk);
 
 	/*
 	 * OK. Socket is unlinked, any packets that arrive now
@@ -1504,6 +1515,86 @@ out:
 	sock_put(sk);
 }
 
+static int parse_netlink_skb_vrf_ifindex(struct sk_buff *skb, struct sock *sk,
+					 struct net *net)
+{
+	static int nl80211_family_id = -1;
+	struct nlmsghdr *hdr = nlmsg_hdr(skb);
+	struct genlmsghdr *ghdr = nlmsg_data(hdr);
+	int ifindex = -1;
+
+	if (nl80211_family_id < 0) {
+		const struct genl_family *nl80211_fam;
+
+		genl_lock();
+		nl80211_fam = genl_family_find_byname(NL80211_GENL_NAME);
+		nl80211_family_id = nl80211_fam->id;
+		genl_unlock();
+	}
+
+	switch (sk->sk_protocol) {
+	case NETLINK_GENERIC:
+		if (nl80211_family_id == hdr->nlmsg_type) {
+			int rem = genlmsg_len(ghdr);
+
+			for (struct nlattr *attr = genlmsg_data(ghdr);
+			     nla_ok(attr, rem);
+			     attr = nla_next(attr, &rem)) {
+				if (nla_type(attr) == NL80211_ATTR_IFINDEX) {
+					ifindex = nla_get_u32(attr);
+					break;
+				}
+			}
+		}
+		break;
+	case NETLINK_ROUTE:
+		switch (hdr->nlmsg_type) {
+		case RTM_GETLINK:
+			fallthrough;
+		case RTM_NEWLINK:
+			fallthrough;
+		case RTM_DELLINK:
+			struct ifinfomsg *ifinfo = (struct ifinfomsg *)nlmsg_data(hdr);
+
+			ifindex = ifinfo->ifi_index;
+			break;
+		case RTM_NEWADDR:
+			fallthrough;
+		case RTM_DELADDR:
+			struct ifaddrmsg *ifamsg = (struct ifaddrmsg *)nlmsg_data(hdr);
+
+			ifindex = ifamsg->ifa_index;
+			break;
+		case RTM_NEWROUTE:
+			fallthrough;
+		case RTM_DELROUTE:
+			struct rtmsg *rtmsg = (struct rtmsg *)nlmsg_data(hdr);
+			int rta_len = RTM_PAYLOAD(hdr);
+
+			for (struct rtattr *rta = RTM_RTA(rtmsg);
+			     RTA_OK(rta, rta_len);
+			     rta = RTA_NEXT(rta, rta_len)) {
+				if (rta->rta_type == RTA_IIF || rta->rta_type == RTA_OIF) {
+					ifindex = *(int *)RTA_DATA(rta);
+					break;
+				}
+			}
+			break;
+		default:
+			break;
+		}
+
+		break;
+	default:
+		break;
+	}
+
+	if (ifindex > 0)
+		ifindex = l3mdev_master_upper_ifindex_by_index(net, ifindex);
+
+	return ifindex;
+}
+
 int netlink_broadcast_filtered(struct sock *ssk, struct sk_buff *skb,
 			       u32 portid,
 			       u32 group, gfp_t allocation,
@@ -1513,6 +1604,8 @@ int netlink_broadcast_filtered(struct sock *ssk, struct sk_buff *skb,
 	struct net *net = sock_net(ssk);
 	struct netlink_broadcast_data info;
 	struct sock *sk;
+	int ifindex = -1;
+	bool parsed = false;
 
 	skb = netlink_trim(skb, allocation);
 
@@ -1534,8 +1627,17 @@ int netlink_broadcast_filtered(struct sock *ssk, struct sk_buff *skb,
 
 	netlink_lock_table();
 
-	sk_for_each_bound(sk, &nl_table[ssk->sk_protocol].mc_list)
-		do_one_broadcast(sk, &info);
+	sk_for_each_bound(sk, &nl_table[ssk->sk_protocol].mc_list) {
+		if (sk->sk_bound_dev_if && !parsed) {
+			ifindex = parse_netlink_skb_vrf_ifindex(skb, sk, net);
+			parsed = true;
+		}
+
+		if (!sk->sk_bound_dev_if ||
+		    ifindex == sk->sk_bound_dev_if ||
+		    ifindex < 0)
+			do_one_broadcast(sk, &info);
+	}
 
 	consume_skb(skb);
 
