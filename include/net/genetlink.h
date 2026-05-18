@@ -158,6 +158,10 @@ static inline void *genl_info_userhdr(const struct genl_info *info)
 	return (u8 *)info->genlhdr + GENL_HDRLEN;
 }
 
+const struct genl_family *genl_family_find_byid(unsigned int id);
+
+const struct genl_family *genl_family_find_byname(char *name);
+
 #define GENL_SET_ERR_MSG(info, msg) NL_SET_ERR_MSG((info)->extack, msg)
 
 #define GENL_SET_ERR_MSG_FMT(info, msg, args...) \
