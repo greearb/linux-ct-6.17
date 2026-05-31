@@ -1057,7 +1057,7 @@ mt76_token_release(struct mt76_dev *dev, int token, bool *wake)
 			mt76_dbg(dev, MT76_DBG_TXV,
 				 "Tx queue blocked, clearing before allowing more transmits.");
 		__mt76_set_tx_blocked(dev, true);
-	} else if (dev->token_count < dev->token_size - MT76_TOKEN_FREE_THR &&
+	} else if (wake && dev->token_count < dev->token_size - MT76_TOKEN_FREE_THR &&
 		   dev->phy.q_tx[0]->blocked && !*wake) {
 		mt76_dbg(dev, MT76_DBG_TXV, "Restarting previously blocked queue.");
 		*wake = true;
