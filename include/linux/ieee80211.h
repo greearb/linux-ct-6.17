@@ -2471,22 +2471,6 @@ struct ieee80211_bss_max_idle_period_ie {
 	u8 idle_options;
 } __packed;
 
-/* BACK action code */
-enum ieee80211_back_actioncode {
-	WLAN_ACTION_ADDBA_REQ = 0,
-	WLAN_ACTION_ADDBA_RESP = 1,
-	WLAN_ACTION_DELBA = 2,
-	WLAN_ACTION_NDP_ADDBA_REQ = 128,
-	WLAN_ACTION_NDP_ADDBA_RESP = 129,
-	WLAN_ACTION_NDP_DELBA = 130,
-};
-
-/* BACK (block-ack) parties */
-enum ieee80211_back_parties {
-	WLAN_BACK_RECIPIENT = 0,
-	WLAN_BACK_INITIATOR = 1,
-};
-
 /* SA Query action */
 enum ieee80211_sa_query_action {
 	WLAN_ACTION_SA_QUERY_REQUEST = 0,
