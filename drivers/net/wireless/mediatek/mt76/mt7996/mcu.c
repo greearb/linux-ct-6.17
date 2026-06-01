@@ -412,7 +412,7 @@ mt7996_mcu_parse_response(struct mt76_dev *mdev, int cmd,
 		event = (struct mt7996_mcu_uni_event *)skb->data;
 		ret = le32_to_cpu(event->status);
 		/* skip invalid event */
-		if (mcu_cmd != le16_to_cpu(event->cid))
+		if (mcu_cmd != le16_to_cpu(event->cid)) {
 			dev_info(mdev->dev, "ERROR: MCU:  Seq matched in response, mcu-cmd did not, mcu-cmd: 0x%x cid: 0x%x status: %d\n",
 				 mcu_cmd, event->cid, ret);
 			ret = -EAGAIN;
