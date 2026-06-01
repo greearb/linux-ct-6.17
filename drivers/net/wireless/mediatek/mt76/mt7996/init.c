@@ -51,8 +51,8 @@ static const struct ieee80211_iface_combination if_comb_global = {
 };
 
 static const struct ieee80211_iface_combination if_comb_global_7992 = {
-	.limits = &if_limits_global,
-	.n_limits = 1,
+	.limits = if_limits_global,
+	.n_limits = ARRAY_SIZE(if_limits_global),
 	.max_interfaces = 32,
 	.num_different_channels = MT7996_MAX_RADIOS - 1,
 	.radar_detect_widths = BIT(NL80211_CHAN_WIDTH_20_NOHT) |
