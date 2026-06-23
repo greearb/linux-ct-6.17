@@ -38,6 +38,12 @@ int mt76_add_chanctx(struct ieee80211_hw *hw,
 	int ret = -EINVAL;
 
 	phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+	if (unlikely(WARN_ON_ONCE(IS_NON_CANONICAL(phy)))) {
+		dev_err(dev->dev,
+			"%s: Bad phy pointer assigned to channel context: %px, band=%d",
+			__func__, phy, conf->def.chan->band);
+		return ret;
+	}
 	if (WARN_ON_ONCE(!phy))
 		return ret;
 
@@ -75,6 +81,12 @@ void mt76_remove_chanctx(struct ieee80211_hw *hw,
 		 * but we should be able to get the right one still
 		 */
 		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+		if (unlikely(WARN_ON_ONCE(IS_NON_CANONICAL(phy)))) {
+			dev_err(dev->dev,
+				"%s: Bad phy pointer assigned to channel context: %px, band=%d",
+				__func__, phy, conf->def.chan->band);
+			return;
+		}
 
 		if (WARN_ON_ONCE(!phy))
 			return;
@@ -111,6 +123,12 @@ void mt76_change_chanctx(struct ieee80211_hw *hw,
 		 * but we should be able to get the right one still
 		 */
 		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+		if (unlikely(WARN_ON_ONCE(IS_NON_CANONICAL(phy)))) {
+			dev_err(dev->dev,
+				"%s: Bad phy pointer assigned to channel context: %px, band=%d",
+				__func__, phy, conf->def.chan->band);
+			return;
+		}
 
 		if (WARN_ON_ONCE(!phy))
 			return;
@@ -157,6 +175,12 @@ int mt76_assign_vif_chanctx(struct ieee80211_hw *hw,
 		 * but we should be able to get the right one still
 		 */
 		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+		if (unlikely(WARN_ON_ONCE(IS_NON_CANONICAL(phy)))) {
+			dev_err(dev->dev,
+				"%s: Bad phy pointer assigned to channel context: %px, band=%d",
+				__func__, phy, conf->def.chan->band);
+			return -EINVAL;
+		}
 
 		if (WARN_ON_ONCE(!phy))
 			return -EINVAL;
@@ -225,6 +249,12 @@ void mt76_unassign_vif_chanctx(struct ieee80211_hw *hw,
 		 * but we should be able to get the right one still
 		 */
 		phy = ctx->phy = dev->band_phys[conf->def.chan->band];
+		if (unlikely(WARN_ON_ONCE(IS_NON_CANONICAL(phy)))) {
+			dev_err(dev->dev,
+				"%s: Bad phy pointer assigned to channel context: %px, band=%d",
+				__func__, phy, conf->def.chan->band);
+			return;
+		}
 
 		if (WARN_ON_ONCE(!phy))
 			return;
@@ -275,10 +305,17 @@ int mt76_switch_vif_chanctx(struct ieee80211_hw *hw,
 	bool update_chan;
 	int i, ret = 0;
 
-	if (mode == CHANCTX_SWMODE_SWAP_CONTEXTS)
+	if (mode == CHANCTX_SWMODE_SWAP_CONTEXTS) {
 		phy = new_ctx->phy = dev->band_phys[conf->def.chan->band];
-	else
+		if (unlikely(WARN_ON_ONCE(IS_NON_CANONICAL(phy)))) {
+			dev_err(dev->dev,
+				"%s: Bad phy pointer assigned to channel context: %px, band=%d",
+				__func__, phy, conf->def.chan->band);
+			return -EINVAL;
+		}
+	} else {
 		phy = new_ctx->phy;
+	}
 	if (!phy)
 		return -EINVAL;
 
