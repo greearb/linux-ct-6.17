@@ -3472,8 +3472,6 @@ void sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo,
 						     sta->link[link_id]);
 			link = wiphy_dereference(sdata->local->hw.wiphy,
 						 sdata->link[link_id]);
-			sinfo->links[link_id] = kzalloc(sizeof(*sinfo->links[0]),
-							GFP_KERNEL);
 
 			if (!link_sta || !lsi || !link) {
 				sinfo->valid_links &= ~BIT(link_id);
