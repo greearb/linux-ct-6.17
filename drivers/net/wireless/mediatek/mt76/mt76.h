@@ -2221,6 +2221,7 @@ static inline bool mt76_queue_is_emi(struct mt76_queue *q)
 	return q->flags & MT_QFLAG_EMI_EN;
 }
 
+void mt76_token_check(struct mt76_dev *dev);
 struct mt76_txwi_cache *
 mt76_token_release(struct mt76_dev *dev, int token, bool *wake);
 int mt76_token_consume(struct mt76_dev *dev, struct mt76_txwi_cache **ptxwi);
