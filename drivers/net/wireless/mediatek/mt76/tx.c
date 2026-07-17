@@ -1063,7 +1063,11 @@ mt76_token_release(struct mt76_dev *dev, int token, bool *wake)
 	} else {
 		oldest_txwi = list_first_entry_or_null(&dev->token_queue, struct mt76_txwi_cache, list);
 
-		if (tx_wait_thresh_ms && oldest_txwi &&
+		/* MT7996 firmware can lock up and not send tx-free for tokens if given enough
+		 * pressure while blocked up. Try to detect that case and ease the pressure until
+		 * either the queue is emptied by tx-free events, or the queue is emptied entirely.
+		 */
+		if (tx_wait_thresh_ms && oldest_txwi && dev->token_count &&
 		    time_is_before_jiffies(oldest_txwi->jiffies + (HZ * tx_wait_thresh_ms / 1000))) {
 			if (!dev->phy.q_tx[0]->blocked)
 				mt76_dbg(dev, MT76_DBG_TXV,
