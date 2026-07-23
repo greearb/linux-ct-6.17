@@ -1245,8 +1245,7 @@ void mt76_dma_cleanup(struct mt76_dev *dev)
 	mt76_for_each_q_rx(dev, i) {
 		struct mt76_queue *q = &dev->q_rx[i];
 
-		if (!mtk_wed_device_active(&dev->mmio.wed) ||
-		    !mt76_queue_is_wed_rro(q)) {
+		if (!mt76_queue_is_wed_rro(q)) {
 			napi_disable(&dev->napi[i]);
 			netif_napi_del(&dev->napi[i]);
 		}
