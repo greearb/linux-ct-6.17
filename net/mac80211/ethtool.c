@@ -1008,6 +1008,7 @@ static void ieee80211_get_stats2(struct net_device *dev,
 						    (data->link_stats[z].link_id == 0xff)) {
 							data->link_stats[z].link_id = link->link_id;
 							q = z;
+							break;
 						}
 					}
 
