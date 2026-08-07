@@ -2651,8 +2651,8 @@ static void pg_nanodelay(u64 delay_ns, struct pktgen_dev* info) {
 
 		/* break out if we are stopped or if we should transmit (maybe our ipg changed?) */
 		if (info->removal_mark || (itmp >= info->next_tx_ns) ||
-		    (t->control && T_WAKE_BLOCKED) ||
-		    (t->control && T_STOP)) {
+		    (t->control & T_WAKE_BLOCKED) ||
+		    (t->control & T_STOP)) {
 			break;
 		}
 	}/* while */
@@ -4444,7 +4444,7 @@ static int pktgen_thread_worker(void *arg)
 				pg_nanodelay(next_ipg, pkt_dev);
 				now = getRelativeCurNs();
 				if (pkt_dev->removal_mark ||
-				    (pkt_dev->pg_thread->control && T_STOP)) {
+				    (pkt_dev->pg_thread->control & T_STOP)) {
 					goto skip_tx;
 				}
 			}
