@@ -4,6 +4,7 @@
  */
 
 #include "mt76.h"
+#include "mt76_connac.h"
 
 static unsigned long tx_wait_thresh_ms = 100;
 module_param_named(tx_wait_thresh_ms, tx_wait_thresh_ms, ulong, 0644);
@@ -1020,10 +1021,12 @@ int mt76_token_consume(struct mt76_dev *dev, struct mt76_txwi_cache **ptxwi)
 	if (token >= 0) {
 		dev->token_count++;
 
-		list_add(&(*ptxwi)->list, dev->token_queue_tail);
-		dev->token_queue_tail = &(*ptxwi)->list;
+		if (is_mt7996(dev)) {
+			list_add(&(*ptxwi)->list, dev->token_queue_tail);
+			dev->token_queue_tail = &(*ptxwi)->list;
 
-		(*ptxwi)->jiffies = jiffies;
+			(*ptxwi)->jiffies = jiffies;
+		}
 	}
 
 #ifdef CONFIG_NET_MEDIATEK_SOC_WED
@@ -1070,9 +1073,11 @@ mt76_token_release(struct mt76_dev *dev, int token, bool *wake)
 	if (txwi) {
 		dev->token_count--;
 
-		if (dev->token_queue_tail == &txwi->list)
-			dev->token_queue_tail = txwi->list.prev;
-		list_del(&txwi->list);
+		if (is_mt7996(dev)) {
+			if (dev->token_queue_tail == &txwi->list)
+				dev->token_queue_tail = txwi->list.prev;
+			list_del(&txwi->list);
+		}
 
 #ifdef CONFIG_NET_MEDIATEK_SOC_WED
 		if (mtk_wed_device_active(&dev->mmio.wed) &&
@@ -1082,21 +1087,26 @@ mt76_token_release(struct mt76_dev *dev, int token, bool *wake)
 #endif
 	}
 
-	oldest_txwi = list_first_entry_or_null(&dev->token_queue, struct mt76_txwi_cache, list);
+	if (is_mt7996(dev)) {
+		oldest_txwi = list_first_entry_or_null(&dev->token_queue, struct mt76_txwi_cache, list);
 
-	/* MT7996 firmware can lock up and not send tx-free for tokens if given enough
-	 * pressure while blocked up. Try to detect that case and ease the pressure until
-	 * either the queue is emptied by tx-free events, or the queue is emptied entirely.
-	 */
-	if (tx_wait_thresh_ms && oldest_txwi && dev->token_count &&
-	    time_is_before_jiffies(oldest_txwi->jiffies + (HZ * tx_wait_thresh_ms / 1000))) {
-		if (!dev->phy.q_tx[0]->blocked)
-			mt76_dbg(dev, MT76_DBG_TXV,
-				 "Tx queue blocked, clearing before allowing more transmits.");
-		__mt76_set_tx_blocked(dev, true);
+		/* MT7996 firmware can lock up and not send tx-free for tokens if given enough
+		 * pressure while blocked up. Try to detect that case and ease the pressure until
+		 * either the queue is emptied by tx-free events, or the queue is emptied entirely.
+		 */
+		if (tx_wait_thresh_ms && oldest_txwi && dev->token_count &&
+		    time_is_before_jiffies(oldest_txwi->jiffies + (HZ * tx_wait_thresh_ms / 1000))) {
+			if (!dev->phy.q_tx[0]->blocked)
+				mt76_dbg(dev, MT76_DBG_TXV,
+					 "Tx queue blocked, clearing before allowing more transmits.");
+			__mt76_set_tx_blocked(dev, true);
+		} else if (wake && dev->token_count < dev->token_size - MT76_TOKEN_FREE_THR &&
+			   dev->phy.q_tx[0]->blocked && !*wake) {
+			mt76_dbg(dev, MT76_DBG_TXV, "Restarting previously blocked queue.");
+			*wake = true;
+		}
 	} else if (wake && dev->token_count < dev->token_size - MT76_TOKEN_FREE_THR &&
-		   dev->phy.q_tx[0]->blocked && !*wake) {
-		mt76_dbg(dev, MT76_DBG_TXV, "Restarting previously blocked queue.");
+		   dev->phy.q_tx[0]->blocked) {
 		*wake = true;
 	}
 
